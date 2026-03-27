@@ -36,14 +36,14 @@ import {
 
 export type IntakeData = {
   niche: string;
-  geo: string;
+  geography: string;
   stage: string;
   budget: string;
-  time: string;
+  timeCommitment: string;
   assets: string[];
-  urls: string;
-  sources: string[];
-  fit: string[];
+  competitorUrls: string[];
+  complaintPlatforms: string[];
+  founderFit: string[];
 };
 
 type ProgressCallback = (update: {
@@ -88,7 +88,7 @@ export async function generateReport(
       niche: intake.niche,
       assets: intake.assets,
       budget: intake.budget,
-      time: intake.time,
+      time: intake.timeCommitment,
       stage: intake.stage,
     });
     report.persona = persona.archetype;
@@ -101,7 +101,7 @@ export async function generateReport(
 
     const userContext = {
       budget: intake.budget,
-      time: intake.time,
+      time: intake.timeCommitment,
       assets: intake.assets,
       stage: intake.stage,
     };
@@ -109,15 +109,15 @@ export async function generateReport(
     // --- Batch 1: Layers 1, 2, 3 (parallel) ---
     const [l1, l2, l3] = await Promise.allSettled([
       runLayer('layer1', () => {
-        const p = layer1Prompt(intake.niche, intake.geo, research);
+        const p = layer1Prompt(intake.niche, intake.geography, research);
         return generateStructuredOutput(p.system, p.user, layer1Schema, MODELS.REASONING);
       }, onProgress),
       runLayer('layer2', () => {
-        const p = layer2Prompt(intake.niche, intake.geo, research);
+        const p = layer2Prompt(intake.niche, intake.geography, research);
         return generateStructuredOutput(p.system, p.user, layer2Schema, MODELS.REASONING);
       }, onProgress),
       runLayer('layer3', () => {
-        const p = layer3Prompt(intake.niche, intake.geo, research, userContext);
+        const p = layer3Prompt(intake.niche, intake.geography, research, userContext);
         return generateStructuredOutput(p.system, p.user, layer3Schema, MODELS.REASONING);
       }, onProgress),
     ]);
@@ -137,7 +137,7 @@ export async function generateReport(
         return generateStructuredOutput(p.system, p.user, layer5Schema, MODELS.REASONING);
       }, onProgress),
       runLayer('layer6', () => {
-        const p = layer6Prompt(intake.niche, intake.geo, research, userContext);
+        const p = layer6Prompt(intake.niche, intake.geography, research, userContext);
         return generateStructuredOutput(p.system, p.user, layer6Schema, MODELS.REASONING);
       }, onProgress),
       runLayer('layer7', () => {

@@ -20,15 +20,16 @@ function trackTavilyUsage(credits: number) {
 async function tavilySearch(query: string, options?: any) {
   trackTavilyUsage(1);
   try {
-    return await tvly.search(query, {
+    const response = await tvly.search(query, {
       searchDepth: 'advanced',
       includeImages: false,
       includeRawContent: false,
       ...options,
     });
+    return response as any; // Cast as any to allow dynamic access to answer/results
   } catch (error) {
     console.error(`[Tavily API] Failed on query: "${query}"`, error);
-    return { results: [] }; // Graceful fallback
+    return { results: [], answer: '' }; // Added answer to fallback
   }
 }
 

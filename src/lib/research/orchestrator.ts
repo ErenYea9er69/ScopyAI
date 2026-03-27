@@ -3,13 +3,13 @@ import * as serper from './serper';
 
 type IntakeData = {
   niche: string;
-  geo: string;
+  geography: string;
   stage: string;
   budget: string;
-  time: string;
+  timeCommitment: string;
   assets: string[];
-  urls: string;
-  sources: string[];
+  competitorUrls: string[];
+  complaintPlatforms: string[];
 };
 
 export type ResearchData = {
@@ -29,12 +29,12 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
   console.log(`[Orchestrator] Firing parallel intel queries for ${intake.niche}...`);
 
   const [marketRes, compRes, painRes, trendRes, regRes, googleFallback] = await Promise.all([
-    tavily.searchMarket(intake.niche, intake.geo),
+    tavily.searchMarket(intake.niche, intake.geography),
     tavily.searchCompetitors(intake.niche),
-    tavily.searchPainPoints(intake.niche, intake.sources),
+    tavily.searchPainPoints(intake.niche, intake.complaintPlatforms),
     tavily.searchTrends(intake.niche),
-    tavily.searchRegulations(intake.niche, intake.geo),
-    serper.googleSearch(`${intake.niche} software solutions ${intake.geo}`) // Fallback/Supplemental
+    tavily.searchRegulations(intake.niche, intake.geography),
+    serper.googleSearch(`${intake.niche} software solutions ${intake.geography}`) // Fallback/Supplemental
   ]);
 
   // Aggregate Raw Strings (for LLM Context)

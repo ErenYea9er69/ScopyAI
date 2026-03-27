@@ -11,7 +11,7 @@
  * passes these into generateStructuredOutput with the matching Zod schema.
  */
 
-import type { Archetype } from './router';
+import type { Archetype } from '../router';
 
 // -- helpers --
 

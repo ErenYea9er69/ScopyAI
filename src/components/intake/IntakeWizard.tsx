@@ -35,12 +35,41 @@ export function IntakeWizard() {
     });
   };
 
-  const handleNext = () => {
-    if (step < 2) setStep(step + 1);
-    else {
-      // Stub for actual generation logic
-      alert('Generating report pipeline kicked off! Redirecting to dashboard...');
-      router.push('/dashboard');
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleNext = async () => {
+    if (step < 2) {
+      setStep(step + 1);
+      return;
+    }
+
+    try {
+      setIsGenerating(true);
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          niche: form.niche,
+          geography: form.geo,
+          stage: form.stage,
+          budget: form.budget,
+          timeCommitment: form.time,
+          assets: form.assets,
+          competitorUrls: form.urls.split(',').map(u => u.trim()).filter(Boolean),
+          complaintPlatforms: form.sources,
+          founderFit: form.fit,
+        }),
+      });
+
+      if (!res.ok) throw new Error('Failed to start generation');
+      
+      const { reportId } = await res.json();
+      router.push(`/report/${reportId}`);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to start generation. Please try again.');
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -185,10 +214,16 @@ export function IntakeWizard() {
             ← Back
           </button>
           <button 
-            className="font-sans text-[13px] font-medium py-2 px-5 rounded-lg border border-accent bg-accent text-bg transition-shadow hover:shadow-[0_4px_16px_rgba(200,242,100,0.2)]"
+            disabled={isGenerating}
+            className={cn(
+              "font-sans text-[13px] font-medium py-2 px-5 rounded-lg border border-accent bg-accent text-bg transition-shadow hover:shadow-[0_4px_16px_rgba(200,242,100,0.2)]",
+              isGenerating && "opacity-50 cursor-not-allowed"
+            )}
             onClick={handleNext}
           >
-            {step === 2 ? "Generate Report" : "Next →"}
+            {step === 2 
+              ? isGenerating ? "Generating..." : "Generate Report" 
+              : "Next →"}
           </button>
         </div>
       </div>
