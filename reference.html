@@ -1,0 +1,1515 @@
+<!--don't dlete this page-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MarketPulse — AI Market Intelligence Engine</title>
+<meta name="description" content="Enter a niche. Get a complete, sourced, confidence-scored intelligence report in 4 minutes. AI-powered market research covering TAM, competitors, unit economics, and GTM strategy.">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap');
+  :root {
+    --bg: #0D0D0E; --surface: #141416; --surface2: #1C1C20; --surface3: #222228;
+    --border: rgba(255,255,255,0.07); --border-accent: rgba(255,255,255,0.14);
+    --text: #F0EFE8; --muted: #6E6D78; --muted2: #9A99A6;
+    --accent: #C8F264; --accent2: #7C6FFF; --accent3: #FF6B4A;
+    --accent4: #4AF4B8; --accent5: #F4C84A; --red: #FF4A6B;
+    --mono: 'DM Mono', monospace; --serif: 'Instrument Serif', serif; --sans: 'DM Sans', sans-serif;
+    --r: 12px; --r-lg: 20px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  .shell { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
+
+  /* NAV */
+  nav { display: flex; align-items: center; justify-content: space-between; padding: 20px 28px; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; background: rgba(13,13,14,0.92); backdrop-filter: blur(12px); }
+  .logo { font-family: var(--mono); font-size: 14px; font-weight: 500; color: var(--accent); letter-spacing: 0.06em; text-decoration: none; display: flex; align-items: center; gap: 8px; }
+  .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: pulse 2.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
+  .nav-links { display: flex; align-items: center; gap: 24px; }
+  .nav-links a { font-size: 13px; color: var(--muted2); text-decoration: none; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--text); }
+  .nav-badge { font-family: var(--mono); font-size: 11px; color: var(--muted); border: 1px solid var(--border-accent); padding: 4px 10px; border-radius: 20px; }
+
+  /* HERO */
+  .hero { padding: 80px 0 60px; text-align: center; }
+  .hero-eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; color: var(--accent); text-transform: uppercase; margin-bottom: 20px; }
+  .hero-title { font-family: var(--serif); font-size: clamp(40px, 6vw, 70px); line-height: 1.08; color: var(--text); margin-bottom: 18px; font-style: italic; }
+  .hero-title span { color: var(--accent); font-style: normal; }
+  .hero-sub { font-size: 16px; color: var(--muted2); max-width: 560px; margin: 0 auto 40px; line-height: 1.7; }
+  .hero-stats { display: flex; align-items: center; justify-content: center; gap: 40px; }
+  .stat { text-align: center; }
+  .stat-num { font-family: var(--mono); font-size: 22px; color: var(--text); font-weight: 500; display: block; }
+  .stat-label { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .stat-divider { width: 1px; height: 36px; background: var(--border-accent); }
+
+  /* SOCIAL PROOF TICKER */
+  .ticker-bar { overflow: hidden; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 10px 0; margin-bottom: 40px; }
+  .ticker-track { display: flex; gap: 48px; animation: ticker 20s linear infinite; white-space: nowrap; }
+  @keyframes ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+  .ticker-item { font-family: var(--mono); font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+  .ticker-dot { width: 5px; height: 5px; border-radius: 50%; }
+
+  /* SECTION DIVIDER */
+  .section-sep { display: flex; align-items: center; gap: 14px; margin: 28px 0 20px; }
+  .section-sep-line { flex: 1; height: 1px; background: var(--border); }
+  .section-sep-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+
+  /* INTAKE FORM */
+  .intake-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; margin-bottom: 28px; }
+  .intake-header { padding: 20px 24px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .intake-header-left { display: flex; align-items: center; gap: 10px; }
+  .layer-badge { font-family: var(--mono); font-size: 10px; padding: 3px 8px; border-radius: 20px; border: 1px solid; letter-spacing: 0.08em; }
+  .badge-input { color: var(--accent); border-color: rgba(200,242,100,0.25); background: rgba(200,242,100,0.05); }
+  .badge-core { color: var(--accent2); border-color: rgba(124,111,255,0.3); background: rgba(124,111,255,0.07); }
+  .badge-new { color: var(--accent4); border-color: rgba(74,244,184,0.25); background: rgba(74,244,184,0.05); }
+  .badge-critical { color: var(--accent3); border-color: rgba(255,107,74,0.3); background: rgba(255,107,74,0.07); }
+  .badge-upgraded { color: var(--accent5); border-color: rgba(244,200,74,0.25); background: rgba(244,200,74,0.06); }
+  .intake-header h3 { font-size: 14px; font-weight: 500; color: var(--text); }
+  .intake-header p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .required-count { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .form-body { padding: 20px 24px 24px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .form-grid.cols-1 { grid-template-columns: 1fr; }
+  .form-field { display: flex; flex-direction: column; gap: 6px; }
+  .form-field.span-2 { grid-column: span 2; }
+  .form-field.span-3 { grid-column: span 3; }
+  label { font-size: 12px; font-weight: 500; color: var(--muted2); letter-spacing: 0.03em; display: flex; align-items: center; gap: 6px; }
+  label .req { color: var(--accent3); }
+  label .tip { font-weight: 400; color: var(--muted); font-size: 11px; font-family: var(--mono); }
+  input[type="text"], input[type="email"], textarea, select { background: var(--surface2); border: 1px solid var(--border-accent); border-radius: var(--r); padding: 10px 13px; color: var(--text); font-family: var(--sans); font-size: 14px; outline: none; width: 100%; transition: border-color 0.2s, background 0.2s; }
+  input[type="text"]:focus, input[type="email"]:focus, textarea:focus, select:focus { border-color: rgba(200,242,100,0.4); background: var(--surface3); }
+  input::placeholder, textarea::placeholder { color: var(--muted); }
+  textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+  select { appearance: none; cursor: pointer; }
+  select option { background: var(--surface2); }
+  .toggle-group { display: flex; flex-wrap: wrap; gap: 7px; }
+  .toggle-opt { background: var(--surface2); border: 1px solid var(--border-accent); border-radius: 8px; padding: 7px 12px; font-size: 13px; color: var(--muted2); cursor: pointer; transition: all 0.15s; user-select: none; }
+  .toggle-opt.active { background: rgba(200,242,100,0.1); border-color: rgba(200,242,100,0.4); color: var(--accent); }
+  .toggle-opt:hover:not(.active) { border-color: var(--border-accent); color: var(--text); background: var(--surface3); }
+
+  /* WIZARD STEPS */
+  .wizard-steps { display: flex; align-items: center; gap: 0; padding: 16px 24px; border-bottom: 1px solid var(--border); }
+  .wiz-step { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 6px 14px; border-radius: 8px; transition: all 0.2s; }
+  .wiz-step.active { background: rgba(200,242,100,0.08); }
+  .wiz-step.completed .wiz-num { background: var(--accent); color: var(--bg); }
+  .wiz-num { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--muted); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 10px; color: var(--muted); flex-shrink: 0; transition: all 0.2s; }
+  .wiz-step.active .wiz-num { border-color: var(--accent); color: var(--accent); }
+  .wiz-label { font-size: 12px; color: var(--muted); transition: color 0.2s; }
+  .wiz-step.active .wiz-label { color: var(--text); }
+  .wiz-connector { width: 24px; height: 1px; background: var(--border); flex-shrink: 0; }
+  .wiz-panel { display: none; }
+  .wiz-panel.active { display: block; }
+  .wiz-nav { display: flex; justify-content: space-between; padding: 16px 24px; border-top: 1px solid var(--border); }
+  .wiz-btn { font-family: var(--sans); font-size: 13px; font-weight: 500; padding: 8px 20px; border-radius: 8px; border: 1px solid var(--border-accent); background: var(--surface2); color: var(--muted2); cursor: pointer; transition: all 0.15s; }
+  .wiz-btn:hover { color: var(--text); border-color: var(--accent); }
+  .wiz-btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .wiz-btn.primary:hover { box-shadow: 0 4px 16px rgba(200,242,100,0.2); }
+
+  /* MODULE GRID */
+  .module-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
+  .module-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+  .module-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px; cursor: pointer; transition: all 0.15s; position: relative; overflow: hidden; }
+  .module-card::before { content: ''; position: absolute; inset: 0; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+  .module-card:hover { border-color: var(--border-accent); transform: translateY(-2px); }
+  .module-card:hover::before { opacity: 1; }
+  .mc-teal::before { background: radial-gradient(circle at 50% 0%, rgba(74,244,184,0.06), transparent 70%); }
+  .mc-purple::before { background: radial-gradient(circle at 50% 0%, rgba(124,111,255,0.07), transparent 70%); }
+  .mc-coral::before { background: radial-gradient(circle at 50% 0%, rgba(255,107,74,0.06), transparent 70%); }
+  .mc-amber::before { background: radial-gradient(circle at 50% 0%, rgba(244,200,74,0.06), transparent 70%); }
+  .mc-green::before { background: radial-gradient(circle at 50% 0%, rgba(200,242,100,0.06), transparent 70%); }
+  .mc-red::before { background: radial-gradient(circle at 50% 0%, rgba(255,75,107,0.07), transparent 70%); }
+  .mc-blue::before { background: radial-gradient(circle at 50% 0%, rgba(100,170,255,0.06), transparent 70%); }
+  .mc-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
+  .mc-icon { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+  .ic-teal { background: rgba(74,244,184,0.1); } .ic-purple { background: rgba(124,111,255,0.12); }
+  .ic-coral { background: rgba(255,107,74,0.1); } .ic-amber { background: rgba(244,200,74,0.1); }
+  .ic-green { background: rgba(200,242,100,0.1); } .ic-red { background: rgba(255,75,107,0.1); }
+  .ic-blue { background: rgba(100,170,255,0.1); }
+  .module-card h4 { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.3; margin-bottom: 4px; }
+  .module-card p { font-size: 11px; color: var(--muted); line-height: 1.45; }
+
+  /* CONFIDENCE BAR */
+  .confidence-bar { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px; margin-top: 14px; }
+  .confidence-label { font-size: 12px; color: var(--muted2); margin-bottom: 10px; font-weight: 500; }
+  .confidence-track { height: 6px; background: var(--surface3); border-radius: 3px; overflow: hidden; margin-bottom: 8px; }
+  .confidence-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--accent3) 0%, var(--accent5) 50%, var(--accent) 100%); transition: width 0.4s cubic-bezier(0.4,0,0.2,1); width: 0%; }
+  .confidence-note { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+
+  /* HALLUCINATION SHIELD */
+  .shield-section { background: var(--surface); border: 1px solid rgba(124,111,255,0.2); border-radius: var(--r-lg); padding: 24px; margin-bottom: 28px; position: relative; overflow: hidden; }
+  .shield-section::before { content: ''; position: absolute; top: -40px; right: -40px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(124,111,255,0.08), transparent 70%); pointer-events: none; }
+  .shield-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .shield-icon { width: 34px; height: 34px; border-radius: 10px; background: rgba(124,111,255,0.12); display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .shield-header h3 { font-size: 14px; font-weight: 500; }
+  .shield-header p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .shield-checks { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .shield-check { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r); padding: 12px 14px; }
+  .check-mark { width: 20px; height: 20px; border-radius: 50%; background: rgba(74,244,184,0.1); display: flex; align-items: center; justify-content: center; font-size: 10px; margin-bottom: 8px; color: var(--accent4); }
+  .shield-check h5 { font-size: 12px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+  .shield-check p { font-size: 11px; color: var(--muted); line-height: 1.4; }
+
+  /* FOUNDER FIT */
+  .founder-fit { background: var(--surface); border: 1px solid rgba(200,242,100,0.12); border-radius: var(--r-lg); padding: 24px; margin-bottom: 28px; }
+  .fit-header { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+  .fit-header h3 { font-size: 14px; font-weight: 500; }
+  .fit-checks { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .fit-row { display: flex; align-items: center; gap: 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r); padding: 11px 14px; cursor: pointer; transition: all 0.15s; }
+  .fit-row:hover { border-color: var(--border-accent); }
+  .fit-checkbox { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--muted); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; transition: all 0.15s; color: var(--bg); }
+  .fit-row.checked .fit-checkbox { background: var(--accent); border-color: var(--accent); }
+  .fit-row p { font-size: 12px; color: var(--muted2); line-height: 1.4; }
+  .fit-row.checked p { color: var(--text); }
+
+  /* SCORECARD */
+  .scorecard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; margin-bottom: 28px; }
+  .scorecard-header { padding: 20px 24px 16px; border-bottom: 1px solid var(--border); }
+  .scorecard-header h3 { font-size: 15px; font-weight: 500; }
+  .scorecard-header p { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .scorecard-body { padding: 20px 24px; }
+  .score-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .score-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .score-indicator { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .si-green { background: var(--accent); } .si-amber { background: var(--accent5); }
+  .si-red { background: var(--red); } .si-purple { background: var(--accent2); }
+  .score-name { flex: 1; font-size: 13px; color: var(--muted2); }
+  .score-value { font-family: var(--mono); font-size: 12px; color: var(--text); font-weight: 500; }
+  .score-track { width: 80px; height: 4px; background: var(--surface3); border-radius: 2px; overflow: hidden; }
+  .score-fill { height: 100%; border-radius: 2px; }
+
+  /* OUTPUT */
+  .output-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; margin-bottom: 28px; }
+  .output-header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  .output-header h3 { font-size: 15px; font-weight: 500; }
+  .output-header p { font-size: 12px; color: var(--muted); margin-top: 3px; max-width: 440px; line-height: 1.5; }
+  .output-live-badge { font-family: var(--mono); font-size: 10px; background: rgba(200,242,100,0.1); border: 1px solid rgba(200,242,100,0.2); color: var(--accent); padding: 4px 10px; border-radius: 20px; letter-spacing: 0.06em; display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+  .live-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); animation: pulse 1.8s ease-in-out infinite; }
+  .output-formats { padding: 20px 24px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; border-bottom: 1px solid var(--border); }
+  .format-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r); padding: 14px; transition: all 0.15s; cursor: pointer; }
+  .format-card:hover { border-color: var(--border-accent); transform: translateY(-2px); }
+  .format-icon { font-size: 18px; margin-bottom: 8px; display: block; }
+  .format-card h5 { font-size: 12px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+  .format-card p { font-size: 11px; color: var(--muted); line-height: 1.35; }
+  .validation-rows { padding: 20px 24px; }
+  .val-row { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .val-row:last-child { border-bottom: none; }
+  .val-num { font-family: var(--mono); font-size: 11px; color: var(--muted); width: 18px; flex-shrink: 0; margin-top: 1px; }
+  .val-content { flex: 1; }
+  .val-content strong { font-size: 13px; font-weight: 500; color: var(--text); display: block; margin-bottom: 2px; }
+  .val-content span { font-size: 12px; color: var(--muted); }
+  .val-tag { font-family: var(--mono); font-size: 10px; padding: 2px 8px; border-radius: 4px; flex-shrink: 0; }
+
+  /* RADAR */
+  .radar-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 24px; margin-bottom: 28px; display: flex; gap: 32px; align-items: center; }
+  .radar-svg { flex-shrink: 0; }
+  .radar-info { flex: 1; }
+  .radar-info h3 { font-size: 15px; font-weight: 500; margin-bottom: 6px; }
+  .radar-info p { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 16px; }
+  .radar-legend { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .radar-leg { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted2); }
+  .radar-leg-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+  /* COMPARISON TABLE */
+  .compare-table { width: 100%; border-collapse: collapse; }
+  .compare-table th, .compare-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .compare-table th { color: var(--muted); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-family: var(--mono); }
+  .compare-table td { color: var(--muted2); }
+  .compare-table td:first-child { color: var(--text); font-weight: 500; }
+  .compare-table .check { color: var(--accent); } .compare-table .cross { color: var(--red); opacity: 0.5; }
+  .compare-table .partial { color: var(--accent5); }
+  .compare-highlight { background: rgba(200,242,100,0.03); }
+
+  /* PRICING */
+  .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 28px; }
+  .price-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 24px; position: relative; transition: all 0.2s; }
+  .price-card:hover { border-color: var(--border-accent); transform: translateY(-3px); }
+  .price-card.featured { border-color: rgba(200,242,100,0.3); }
+  .price-card.featured::after { content: 'Most popular'; position: absolute; top: -10px; right: 16px; background: var(--accent); color: var(--bg); font-family: var(--mono); font-size: 10px; padding: 2px 10px; border-radius: 20px; font-weight: 500; }
+  .price-name { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+  .price-amount { font-family: var(--mono); font-size: 32px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+  .price-amount small { font-size: 14px; color: var(--muted); }
+  .price-desc { font-size: 12px; color: var(--muted); margin-bottom: 18px; line-height: 1.5; }
+  .price-features { list-style: none; margin-bottom: 20px; }
+  .price-features li { font-size: 12px; color: var(--muted2); padding: 5px 0; display: flex; align-items: center; gap: 8px; }
+  .price-features li::before { content: '✓'; color: var(--accent4); font-size: 11px; }
+  .price-btn { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-accent); background: var(--surface2); color: var(--muted2); font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+  .price-btn:hover { color: var(--text); border-color: var(--accent); }
+  .price-card.featured .price-btn { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+  /* TESTIMONIALS */
+  .testimonials { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 28px; }
+  .testimonial-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px; }
+  .testimonial-card p { font-size: 13px; color: var(--muted2); line-height: 1.6; margin-bottom: 14px; font-style: italic; }
+  .testimonial-author { display: flex; align-items: center; gap: 10px; }
+  .testimonial-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--surface3); display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .testimonial-name { font-size: 12px; font-weight: 500; color: var(--text); }
+  .testimonial-role { font-size: 11px; color: var(--muted); }
+
+  /* CTA */
+  .cta-section { text-align: center; padding: 20px 0 40px; }
+  .cta-email-row { display: flex; gap: 10px; max-width: 480px; margin: 0 auto 16px; }
+  .cta-email-row input { flex: 1; }
+  .cta-btn { display: inline-flex; align-items: center; gap: 10px; background: var(--accent); color: var(--bg); font-family: var(--sans); font-size: 15px; font-weight: 600; padding: 14px 32px; border-radius: 50px; border: none; cursor: pointer; transition: all 0.2s; }
+  .cta-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(200,242,100,0.2); }
+  .cta-sub { font-size: 12px; color: var(--muted); margin-top: 12px; }
+  /* CRUCIBLE DASHBOARD (PHASE 2-3) */
+  .crucible-dashboard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 24px; margin: 40px auto 20px; max-width: 600px; text-align: left; position: relative; box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5); overflow: hidden; }
+  .crucible-stage-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .crucible-title { font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px; font-family: var(--sans); }
+  .crucible-pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--accent3); animation: pulse-red 1s infinite; }
+  
+  .crucible-phases { position: relative; min-height: 160px; }
+  .phase-container { display: none; width: 100%; height: 100%; }
+  .phase-container.active { display: block; animation: fadeIn 0.4s ease; }
+  
+  /* PHASE 1: GAUNTLET (LOG) */
+  .gauntlet-log { font-family: var(--mono); font-size: 11px; color: var(--muted2); background: rgba(0,0,0,0.3); border: 1px solid var(--border-accent); border-radius: var(--r); padding: 16px; height: 160px; overflow-y: hidden; display: flex; flex-direction: column; gap: 6px; position: relative; box-shadow: inset 0 2px 10px rgba(0,0,0,0.2); }
+  .gauntlet-log::before { content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.2) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03)); background-size: 100% 2px, 3px 100%; pointer-events: none; z-index: 10; opacity: 0.3; }
+  .gauntlet-log::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 40px; background: linear-gradient(transparent, rgba(13,13,14,0.9)); pointer-events: none; }
+  
+  /* PHASE 2: PREDATOR SONAR */
+  .sonar-wrap { position: relative; height: 160px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-accent); border-radius: var(--r); overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  .sonar-ring { position: absolute; border: 1px solid rgba(200,242,100,0.1); border-radius: 50%; animation: sonar-expand 3s linear infinite; opacity: 0; }
+  .sonar-sweep { position: absolute; width: 50%; height: 50%; background: conic-gradient(from 0deg, rgba(200,242,100,0.2), transparent 90deg); transform-origin: top left; top: 50%; left: 50%; animation: sonar-rotate 4s linear infinite; }
+  .predator-blip { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: var(--accent3); box-shadow: 0 0 10px var(--accent3); opacity: 0; transition: opacity 0.3s; }
+  .predator-blip.detected { opacity: 1; animation: blip-flash 1s infinite; }
+  .predator-label { position: absolute; font-family: var(--mono); font-size: 9px; color: var(--muted2); white-space: nowrap; pointer-events: none; transition: all 0.3s; }
+  
+  /* PHASE 3: STRESS TRAJECTORY */
+  .stress-wrap { position: relative; height: 160px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-accent); border-radius: var(--r); padding: 20px; overflow: hidden; }
+  .stress-graph { width: 100%; height: 100%; position: relative; }
+  .stress-line { position: absolute; bottom: 0; left: 0; width: 0%; height: 2px; background: var(--accent5); transition: width 0.1s linear; }
+  .stress-point { position: absolute; width: 4px; height: 4px; border-radius: 50%; background: var(--accent5); box-shadow: 0 0 6px var(--accent5); transition: bottom 0.3s ease; }
+  .stress-indicator { position: absolute; top: 10px; right: 10px; font-family: var(--mono); font-size: 10px; color: var(--accent5); text-transform: uppercase; }
+
+  @keyframes sonar-expand { 0%{width:0;height:0;opacity:0.3} 100%{width:300px;height:300px;opacity:0} }
+  @keyframes sonar-rotate { 0%{transform:rotate(0deg) translate(-100%, -100%)} 100%{transform:rotate(360deg) translate(-100%, -100%)} }
+  @keyframes blip-flash { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.5);opacity:0.6} }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  
+  .gauntlet-log { font-family: var(--mono); font-size: 11px; color: var(--muted2); background: rgba(0,0,0,0.3); border: 1px solid var(--border-accent); border-radius: var(--r); padding: 16px; height: 160px; overflow-y: hidden; display: flex; flex-direction: column; gap: 6px; position: relative; box-shadow: inset 0 2px 10px rgba(0,0,0,0.2); }
+  .gauntlet-log::before { content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.2) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03)); background-size: 100% 2px, 3px 100%; pointer-events: none; z-index: 10; opacity: 0.3; }
+  .gauntlet-log::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 40px; background: linear-gradient(transparent, rgba(13,13,14,0.9)); pointer-events: none; }
+  
+  .log-line { display: flex; align-items: flex-start; gap: 10px; opacity: 0; transform: translateY(6px); transition: all 0.3s ease; }
+  .log-line.visible { opacity: 1; transform: translateY(0); }
+  .log-time { color: var(--accent2); font-size: 10px; opacity: 0.6; width: 34px; flex-shrink: 0; margin-top: 1px; }
+  .log-msg { line-height: 1.4; }
+  .log-msg.red { color: var(--red); text-shadow: 0 0 8px rgba(255,75,107,0.3); } 
+  .log-msg.green { color: var(--accent); text-shadow: 0 0 8px rgba(200,242,100,0.3); } 
+  .log-msg.amber { color: var(--accent5); text-shadow: 0 0 8px rgba(244,200,74,0.3); }
+  .log-msg.typing::after { content: "|"; animation: blink 0.8s infinite; margin-left: 2px; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* Survival Gauge */
+  .survival-gauge-wrap { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 20px; }
+  .survival-gauge-label { font-family: var(--mono); font-size: 10px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.05em; width: 140px; }
+  .survival-gauge-track { flex: 1; height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; position: relative; border: 1px solid var(--border); }
+  .survival-gauge-fill { height: 100%; width: 100%; background: linear-gradient(90deg, var(--red), var(--accent5), var(--accent)); transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: left; transform: scaleX(1); }
+  .survival-value { font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--accent); width: 40px; text-align: right; }
+  
+  /* AUTO-PIVOT ENGINE (PHASE 2) */
+  .pivot-engine { background: linear-gradient(180deg, var(--surface), rgba(20,20,22,0)); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 32px 24px; margin-bottom: 28px; text-align: center; }
+  .pivot-header h3 { font-size: 16px; font-weight: 500; margin-bottom: 8px; }
+  .pivot-header p { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+  .pivot-row { display: flex; align-items: center; justify-content: center; gap: 20px; margin-top: 20px; }
+  .pivot-box { flex: 1; max-width: 320px; background: var(--surface2); border: 1px solid var(--border-accent); border-radius: var(--r); padding: 20px; position: relative; text-align: left; }
+  .pivot-box.dead { border-color: rgba(255,107,74,0.3); }
+  .pivot-box.survived { border-color: rgba(200,242,100,0.3); background: rgba(200,242,100,0.03); }
+  .pivot-badge { position: absolute; top: -10px; left: 20px; font-family: var(--mono); font-size: 10px; padding: 2px 10px; border-radius: 20px; }
+  .badge-dead { background: var(--red); color: var(--bg); }
+  .badge-survived { background: var(--accent); color: var(--bg); }
+  .pivot-box h4 { font-size: 14px; color: var(--text); margin-bottom: 12px; font-weight: 500; }
+  .pivot-stat { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted2); margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border); }
+  .pivot-arrow { font-size: 20px; color: var(--muted); }
+  .run-pivot-btn { background: var(--surface3); border: 1px solid var(--border-accent); color: var(--text); padding: 8px 16px; border-radius: 20px; font-size: 12px; cursor: pointer; transition: all 0.2s; margin-top: 24px; }
+  .run-pivot-btn:hover { border-color: var(--accent); color: var(--accent); }
+  
+  /* MOAT / DEFENSE CARDS (PHASE 2) */
+  .moat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 28px; }
+  .moat-card { background: var(--surface); border-left: 3px solid var(--accent); border-radius: 4px var(--r) var(--r) 4px; padding: 16px 20px; }
+  .moat-card h4 { font-size: 14px; color: var(--text); margin-bottom: 6px; font-weight: 500; }
+  .moat-card p { font-size: 12px; color: var(--muted2); line-height: 1.5; }
+
+  /* FOOTER */
+  .site-footer { border-top: 1px solid var(--border); padding: 40px 28px; margin-top: 20px; }
+  .footer-inner { max-width: 1180px; margin: 0 auto; display: flex; justify-content: space-between; align-items: flex-start; gap: 40px; }
+  .footer-col h5 { font-size: 11px; font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 12px; }
+  .footer-col a { display: block; font-size: 13px; color: var(--muted2); text-decoration: none; padding: 3px 0; transition: color 0.15s; }
+  .footer-col a:hover { color: var(--text); }
+  .trust-badges { display: flex; align-items: center; gap: 20px; margin-top: 20px; }
+  .trust-badge { font-family: var(--mono); font-size: 10px; color: var(--muted); border: 1px solid var(--border); padding: 4px 10px; border-radius: 6px; display: flex; align-items: center; gap: 6px; }
+  .footer-bottom { max-width: 1180px; margin: 20px auto 0; padding-top: 20px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+
+  /* REVEAL ANIMATION */
+  .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.6s ease, transform 0.6s ease; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+  
+  #hero-title, #hero-sub, #persona-grid, .sample-content { transition: opacity 0.4s ease, transform 0.4s ease; }
+
+  /* UNIT ECON */
+  .unit-econ { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; margin-bottom: 28px; }
+
+  /* SAMPLE PREVIEW */
+  .sample-preview { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r); margin: 0 24px 20px; overflow: hidden; }
+  .sample-toggle { padding: 12px 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--muted2); font-weight: 500; transition: color 0.15s; }
+  .sample-toggle:hover { color: var(--text); }
+  .sample-toggle .arrow { transition: transform 0.3s; font-size: 11px; }
+  .sample-toggle.open .arrow { transform: rotate(180deg); }
+  .sample-body { max-height: 0; overflow: hidden; transition: max-height 0.4s ease; }
+  .sample-body.open { max-height: 600px; }
+  .sample-content { padding: 16px; border-top: 1px solid var(--border); }
+  .sample-row { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
+  .sample-row:last-child { border-bottom: none; }
+  .sample-label { font-size: 11px; color: var(--muted); width: 100px; flex-shrink: 0; font-family: var(--mono); }
+  .sample-val { font-size: 12px; color: var(--text); flex: 1; }
+  .sample-cite { font-size: 10px; color: var(--accent2); font-family: var(--mono); }
+
+  /* PERSONA SELECTOR (PHASE 3) */
+  .persona-selector { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 32px; flex-wrap: wrap; }
+  .p-tab { background: var(--surface); border: 1px solid var(--border-accent); color: var(--muted2); font-family: var(--sans); font-size: 13px; font-weight: 500; padding: 10px 20px; border-radius: 30px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
+  .p-tab:hover { border-color: rgba(200,242,100,0.4); color: var(--text); background: var(--surface2); }
+  .p-tab.active { background: rgba(200,242,100,0.1); border-color: var(--accent); color: var(--accent); }
+  .p-icon { font-size: 16px; }
+
+  @media (max-width: 768px) {
+    .module-grid { grid-template-columns: 1fr 1fr; }
+    .form-grid, .form-grid.cols-3 { grid-template-columns: 1fr; }
+    .form-field.span-2, .form-field.span-3 { grid-column: span 1; }
+    .shield-checks, .pricing-grid, .testimonials { grid-template-columns: 1fr; }
+    .fit-checks { grid-template-columns: 1fr; }
+    .output-formats { grid-template-columns: 1fr 1fr; }
+    .hero-stats { gap: 20px; flex-wrap: wrap; }
+    .radar-section { flex-direction: column; }
+    .footer-inner { flex-direction: column; gap: 24px; }
+    .cta-email-row { flex-direction: column; }
+    .wizard-steps { overflow-x: auto; }
+    .compare-table { font-size: 11px; }
+    .compare-table th, .compare-table td { padding: 8px; }
+    .persona-selector { flex-direction: column; width: 100%; max-width: 300px; margin: 0 auto 32px; }
+    .p-tab { width: 100%; justify-content: center; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="logo" href="#"><span class="logo-dot"></span> ScopyAI</a>
+  <div class="nav-links">
+    <a href="#modules">Modules</a>
+    <a href="#output">Output</a>
+    <a href="#pricing">Pricing</a>
+    <span class="nav-badge">Intelligence Engine</span>
+  </div>
+</nav>
+
+<div class="shell">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-eyebrow">The Anti-Fragile Idea Crucible</div>
+    <h1 class="hero-title" id="hero-title">The AI that tries to kill your idea<br><span>before you build it</span></h1>
+    <p class="hero-sub" id="hero-sub">We don't just "generate ideas." We run them through an adversarial survival engine, kill the weak ones, pivot the saturated ones, and only output blueprints that survive the Crucible.</p>
+    
+    <!-- CRUCIBLE DASHBOARD -->
+    <div class="crucible-dashboard reveal">
+      <div class="crucible-stage-header">
+        <div class="crucible-title"><div class="crucible-pulse"></div> <span id="crucible-phase-name">Adversarial Survival Engine</span></div>
+        <div class="nav-badge" id="gauntlet-status" style="border-color: rgba(200,242,100,0.3); color: var(--accent);">READY</div>
+      </div>
+      
+      <div class="crucible-phases">
+        <!-- PHASE 1: LOG -->
+        <div class="phase-container active" id="phase-1">
+          <div class="gauntlet-log" id="gauntlet-log">
+            <div class="log-line visible"><span class="log-time">00:00</span> <span class="log-msg">Crucible ready. Waiting for niche input...</span></div>
+          </div>
+        </div>
+        
+        <!-- PHASE 2: SONAR -->
+        <div class="phase-container" id="phase-2">
+          <div class="sonar-wrap">
+            <div class="sonar-sweep"></div>
+            <div class="sonar-ring" style="animation-delay: 0s"></div>
+            <div class="sonar-ring" style="animation-delay: 1s"></div>
+            <div class="sonar-ring" style="animation-delay: 2s"></div>
+            <div id="predator-field"></div>
+          </div>
+        </div>
+        
+        <!-- PHASE 3: STRESS -->
+        <div class="phase-container" id="phase-3">
+          <div class="stress-wrap">
+            <div class="stress-indicator" id="stress-level">Normal</div>
+            <div class="stress-graph">
+              <svg width="100%" height="100%" preserveAspectRatio="none">
+                <path id="stress-path" d="" fill="none" stroke="var(--accent5)" stroke-width="2" />
+              </svg>
+              <div id="stress-dot" class="stress-point"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="survival-gauge-wrap">
+        <div class="survival-gauge-label">Crucible Confidence Score</div>
+        <div class="survival-gauge-track">
+          <div class="survival-gauge-fill" id="survival-fill" style="transform: scaleX(1)"></div>
+        </div>
+        <div class="survival-value" id="survival-val">100%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SOCIAL PROOF TICKER -->
+  <div class="ticker-bar">
+    <div class="ticker-track">
+      <span class="ticker-item"><span class="ticker-dot" style="background:var(--accent4)"></span> 12,847 reports generated</span>
+      <span class="ticker-item"><span class="ticker-dot" style="background:var(--accent)"></span> 340 niches analysed today</span>
+      <span class="ticker-item"><span class="ticker-dot" style="background:var(--accent2)"></span> Used by founders in 48 countries</span>
+      <span class="ticker-item"><span class="ticker-dot" style="background:var(--accent5)"></span> 96% user satisfaction</span>
+      <span class="ticker-item"><span class="ticker-dot" style="background:var(--accent3)"></span> Avg. 18 min saved per research cycle</span>
+      <span class="ticker-item"><span class="ticker-dot" style="background:var(--accent4)"></span> 12,847 reports generated</span>
+      <span class="ticker-item"><span class="ticker-dot" style="background:var(--accent)"></span> 340 niches analysed today</span>
+      <span class="ticker-item"><span class="ticker-dot" style="background:var(--accent2)"></span> Used by founders in 48 countries</span>
+      <span class="ticker-item"><span class="ticker-dot" style="background:var(--accent5)"></span> 96% user satisfaction</span>
+      <span class="ticker-item"><span class="ticker-dot" style="background:var(--accent3)"></span> Avg. 18 min saved per research cycle</span>
+    </div>
+  </div>
+
+  <!-- HALLUCINATION SHIELD -->
+  <div class="shield-section reveal" id="shield">
+    <div class="shield-header">
+      <div class="shield-icon">🛡️</div>
+      <div>
+        <h3>Hallucination Shield — every claim is verified</h3>
+        <p>77% of businesses have made decisions based on hallucinated AI content (<a href="https://www.salesforce.com/news/stories/ai-trust-research/" style="color:var(--accent2);font-size:12px;" target="_blank">Salesforce, 2024</a>). MarketPulse eliminates that risk.</p>
+      </div>
+    </div>
+    <div class="shield-checks">
+      <div class="shield-check">
+        <div class="check-mark">✓</div>
+        <h5>Source citations on every claim</h5>
+        <p>TAM figures, competitor revenue estimates, and trend data are tied to a retrievable source — not confabulated.</p>
+      </div>
+      <div class="shield-check">
+        <div class="check-mark">✓</div>
+        <h5>Confidence intervals, not false precision</h5>
+        <p>Instead of "TAM: $4.2B", you get "TAM: $2.8–5.1B (medium confidence, 2 sources)". Uncertainty is visible.</p>
+      </div>
+      <div class="shield-check">
+        <div class="check-mark">✓</div>
+        <h5>Conflict flags when sources disagree</h5>
+        <p>If two sources give different growth rates, the report flags the conflict rather than silently averaging.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SMART INTAKE WIZARD -->
+  <div class="section-sep" id="intake"><div class="section-sep-line"></div><div class="section-sep-label">Smart Intake — Personalised Intelligence</div><div class="section-sep-line"></div></div>
+
+  <div class="intake-card reveal">
+    <div class="intake-header">
+      <div class="intake-header-left">
+        <span class="layer-badge badge-input">Input</span>
+        <div><h3>Tell us about your market</h3><p>The more context, the sharper your report</p></div>
+      </div>
+      <span class="required-count" id="field-count">0 / 4 core fields</span>
+    </div>
+    <div class="wizard-steps">
+      <div class="wiz-step active" onclick="goStep(0)"><div class="wiz-num">1</div><span class="wiz-label">Niche</span></div>
+      <div class="wiz-connector"></div>
+      <div class="wiz-step" onclick="goStep(1)"><div class="wiz-num">2</div><span class="wiz-label">You</span></div>
+      <div class="wiz-connector"></div>
+      <div class="wiz-step" onclick="goStep(2)"><div class="wiz-num">3</div><span class="wiz-label">Competitors</span></div>
+    </div>
+
+    <!-- Step 1: Niche -->
+    <div class="wiz-panel active" id="step-0">
+      <div class="form-body">
+        <div class="form-grid">
+          <div class="form-field span-2">
+            <label>Niche description <span class="req">*</span> <span class="tip">— be specific</span></label>
+            <textarea placeholder='e.g. "AI tools for freelance copywriters who want to charge more without working more hours"' oninput="trackFields()" id="f1"></textarea>
+          </div>
+          <div class="form-field">
+            <label>Primary geography <span class="req">*</span></label>
+            <select id="f2" onchange="trackFields()">
+              <option value="">Select market…</option>
+              <option>United States</option><option>United Kingdom</option><option>Europe (multi)</option>
+              <option>Australia / NZ</option><option>Global (English-speaking)</option><option>MENA</option>
+              <option>Southeast Asia</option><option>Latin America</option><option>Sub-Saharan Africa</option>
+              <option>India</option><option>Other</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Business stage <span class="req">*</span></label>
+            <select id="f3" onchange="trackFields()">
+              <option value="">Select stage…</option>
+              <option>Idea validation (pre-revenue)</option><option>MVP built, no customers</option>
+              <option>Early revenue (&lt;$5k/mo)</option><option>Scaling ($5k–$50k/mo)</option>
+              <option>Entering new market</option>
+            </select>
+          </div>
+          <div class="form-field span-2">
+            <label>Keyword seeds <span class="tip">— comma-separated, helps the trend engine</span></label>
+            <input type="text" placeholder='e.g. "AI copywriting, freelance tools, content automation"' id="f4" oninput="trackFields()">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Founder Context -->
+    <div class="wiz-panel" id="step-1">
+      <div class="form-body">
+        <div class="form-grid cols-3">
+          <div class="form-field">
+            <label>Available budget</label>
+            <select><option>Under $500</option><option>$500–$2k</option><option>$2k–$10k</option><option>$10k–$50k</option><option>$50k+</option></select>
+          </div>
+          <div class="form-field">
+            <label>Time commitment</label>
+            <select><option>Side project (&lt;10h/week)</option><option>Part-time (10–25h/week)</option><option>Full-time (40h+)</option><option>Team of 2–5</option></select>
+          </div>
+          <div class="form-field">
+            <label>Goal timeline</label>
+            <select><option>Revenue in 30 days</option><option>Revenue in 90 days</option><option>6-month build</option><option>1–2 year venture</option></select>
+          </div>
+          <div class="form-field span-3">
+            <label>Existing assets <span class="tip">— select all that apply</span></label>
+            <div class="toggle-group" id="assets-group">
+              <span class="toggle-opt" onclick="toggle(this)">Audience / community</span>
+              <span class="toggle-opt" onclick="toggle(this)">Domain expertise</span>
+              <span class="toggle-opt" onclick="toggle(this)">Email list</span>
+              <span class="toggle-opt" onclick="toggle(this)">Social following</span>
+              <span class="toggle-opt" onclick="toggle(this)">Industry network</span>
+              <span class="toggle-opt" onclick="toggle(this)">Existing product/code</span>
+              <span class="toggle-opt" onclick="toggle(this)">Brand / reputation</span>
+              <span class="toggle-opt" onclick="toggle(this)">None of the above</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Competitors & Sources -->
+    <div class="wiz-panel" id="step-2">
+      <div class="form-body">
+        <div class="form-grid">
+          <div class="form-field span-2">
+            <label>Known competitor URLs <span class="tip">— up to 3, we'll deep-dive them</span></label>
+            <input type="text" placeholder="e.g. competitor1.com, competitor2.io, competitor3.com">
+          </div>
+          <div class="form-field span-2">
+            <label>Where does your audience complain? <span class="tip">— select all that apply</span></label>
+            <div class="toggle-group" id="sources-group">
+              <span class="toggle-opt" onclick="toggle(this)">Reddit</span>
+              <span class="toggle-opt" onclick="toggle(this)">G2 Reviews</span>
+              <span class="toggle-opt" onclick="toggle(this)">Trustpilot</span>
+              <span class="toggle-opt" onclick="toggle(this)">Amazon Reviews</span>
+              <span class="toggle-opt" onclick="toggle(this)">X / Twitter</span>
+              <span class="toggle-opt" onclick="toggle(this)">Facebook Groups</span>
+              <span class="toggle-opt" onclick="toggle(this)">Industry Forums</span>
+              <span class="toggle-opt" onclick="toggle(this)">YouTube Comments</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="wiz-nav">
+      <button class="wiz-btn" id="wiz-back" onclick="prevStep()" style="visibility:hidden">← Back</button>
+      <button class="wiz-btn primary" id="wiz-next" onclick="nextStep()">Next →</button>
+    </div>
+  </div>
+
+  <!-- FOUNDER FIT -->
+  <div class="founder-fit reveal">
+    <div class="fit-header">
+      <div style="width:34px;height:34px;border-radius:10px;background:rgba(200,242,100,0.1);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">🎯</div>
+      <div>
+        <h3>Founder–market fit pre-check</h3>
+        <p style="font-size:12px;color:var(--muted);margin-top:2px;">The engine weights opportunity scores based on your answers. A high-moat niche isn't an opportunity if you lack access to it.</p>
+      </div>
+    </div>
+    <div class="fit-checks" id="fit-grid">
+      <div class="fit-row" onclick="toggleFit(this)"><div class="fit-checkbox"></div><p>I have personally experienced the pain point this niche addresses</p></div>
+      <div class="fit-row" onclick="toggleFit(this)"><div class="fit-checkbox"></div><p>I can name at least 5 people in this target audience I could call today</p></div>
+      <div class="fit-row" onclick="toggleFit(this)"><div class="fit-checkbox"></div><p>I have domain expertise that reduces my research / production costs</p></div>
+      <div class="fit-row" onclick="toggleFit(this)"><div class="fit-checkbox"></div><p>I can reach the first 50 customers without paid acquisition</p></div>
+      <div class="fit-row" onclick="toggleFit(this)"><div class="fit-checkbox"></div><p>I understand the regulatory / compliance landscape in this niche</p></div>
+      <div class="fit-row" onclick="toggleFit(this)"><div class="fit-checkbox"></div><p>I have built and sold something before (any product or service)</p></div>
+    </div>
+  </div>
+
+  <!-- CONFIDENCE BAR -->
+  <div class="confidence-bar" id="conf-bar">
+    <div class="confidence-label">Report quality signal — fill in more context for better output</div>
+    <div class="confidence-track"><div class="confidence-fill" id="conf-fill" style="width:8%"></div></div>
+    <div class="confidence-note" id="conf-note">Start by describing your niche above to unlock the full intelligence engine.</div>
+  </div>
+
+  <!-- MODULES: AUDIENCE INTELLIGENCE -->
+  <div class="section-sep reveal" id="modules"><div class="section-sep-line"></div><div class="section-sep-label">Layer 1 — Audience Intelligence</div><div class="section-sep-line"></div></div>
+  <div class="module-grid reveal">
+    <div class="module-card mc-teal"><div class="mc-top"><div class="mc-icon ic-teal">🔥</div><span class="layer-badge badge-core">Core</span></div><h4>Pain point taxonomy</h4><p>Ranked by frequency, emotional intensity, and willingness-to-pay signal. Sources cited per pain point.</p></div>
+    <div class="module-card mc-teal"><div class="mc-top"><div class="mc-icon ic-teal">💬</div><span class="layer-badge badge-core">Core</span></div><h4>Verbatim buyer language</h4><p>Exact phrases from Reddit, reviews, and forums. Ready to paste into copy — not paraphrased.</p></div>
+    <div class="module-card mc-teal"><div class="mc-top"><div class="mc-icon ic-teal">⚡</div><span class="layer-badge badge-core">Core</span></div><h4>Purchase trigger map</h4><p>The specific life events or emotional states that cause someone to open their wallet. Critical for ad timing.</p></div>
+    <div class="module-card mc-teal"><div class="mc-top"><div class="mc-icon ic-teal">🎭</div><span class="layer-badge badge-core">Core</span></div><h4>Avatar — full DNA profile</h4><p>Age, income, platforms, identity, self-narrative, influencers they trust, and content they consume.</p></div>
+    <div class="module-card mc-teal"><div class="mc-top"><div class="mc-icon ic-teal">🧱</div><span class="layer-badge badge-core">Core</span></div><h4>Hidden objections + fears</h4><p>What they believe but won't say in a survey — the real reason the last 3 products failed to convert.</p></div>
+    <div class="module-card mc-teal"><div class="mc-top"><div class="mc-icon ic-teal">🔮</div><span class="layer-badge badge-core">Core</span></div><h4>Desires, dreams, & identity</h4><p>The aspirational "after" state — mapped to identity language, not just functional outcomes.</p></div>
+    <div class="module-card mc-teal"><div class="mc-top"><div class="mc-icon ic-teal">👻</div><span class="layer-badge badge-new">New</span></div><h4>Shadow avatar (anti-persona)</h4><p>Profile the customer who matches your demographics but will never buy. The lookalike who wastes your ad spend — identified and excluded before you launch.</p></div>
+    <div class="module-card mc-teal"><div class="mc-top"><div class="mc-icon ic-teal">💳</div><span class="layer-badge badge-new">New</span></div><h4>Payment threshold detector</h4><p>Mines pricing discussions from Reddit, forums, and reviews to quantify willingness-to-pay. Separates people who complain from people who'd actually pay to solve the problem.</p></div>
+  </div>
+
+  <!-- MODULES: MARKET INTELLIGENCE -->
+  <div class="section-sep reveal"><div class="section-sep-line"></div><div class="section-sep-label">Layer 2 — Market Intelligence</div><div class="section-sep-line"></div></div>
+  <div class="module-grid reveal">
+    <div class="module-card mc-blue"><div class="mc-top"><div class="mc-icon ic-blue">📊</div><span class="layer-badge badge-core">Core</span></div><h4>TAM / SAM / SOM with confidence ranges</h4><p>Not a single number — a range with confidence score and source citations. $2.8–5.1B (medium confidence).</p></div>
+    <div class="module-card mc-blue"><div class="mc-top"><div class="mc-icon ic-blue">📈</div><span class="layer-badge badge-core">Core</span></div><h4>5-year trend trajectory</h4><p>Search volume trend, social discussion velocity, funding activity, and media coverage arc.</p></div>
+    <div class="module-card mc-blue"><div class="mc-top"><div class="mc-icon ic-blue">🌍</div><span class="layer-badge badge-core">Core</span></div><h4>International opportunity lens</h4><p>Same niche in other geographies — often 3–5x TAM with 60% less competition. Flags the best alternate market.</p></div>
+    <div class="module-card mc-blue"><div class="mc-top"><div class="mc-icon ic-blue">🤖</div><span class="layer-badge badge-core">Core</span></div><h4>AI persona simulation</h4><p>Generate 1,000+ synthetic buyer profiles to stress-test your positioning, pricing, and messaging before launch.</p></div>
+    <div class="module-card mc-blue"><div class="mc-top"><div class="mc-icon ic-blue">📡</div><span class="layer-badge badge-core">Core</span></div><h4>Live social listening feed</h4><p>Real-time Reddit, X, and forum monitoring for your niche keywords. Know what's being said right now.</p></div>
+    <div class="module-card mc-blue"><div class="mc-top"><div class="mc-icon ic-blue">💰</div><span class="layer-badge badge-core">Core</span></div><h4>Cost structure + hidden cost audit</h4><p>Estimated COGS and margin benchmarks — plus the costs nobody budgets for: compliance overhead, support ticket volume, API fees that scale non-linearly, and refund rates.</p></div>
+    <div class="module-card mc-blue"><div class="mc-top"><div class="mc-icon ic-blue">🧭</div><span class="layer-badge badge-new">New</span></div><h4>Adjacent market radar</h4><p>Detects nearby markets sharing 50%+ of your audience. "Your core is $420M. The adjacent enterprise training market is $2.1B and shares 60% of your buyers — consider bridging."</p></div>
+    <div class="module-card mc-blue"><div class="mc-top"><div class="mc-icon ic-blue">⏱️</div><span class="layer-badge badge-new">New</span></div><h4>Market timing verdict</h4><p>Too early, too late, or right on time? "This niche entered growth Q2 2024. Early movers captured 40% share. You're entering mid-growth — still viable but harder."</p></div>
+    <div class="module-card mc-blue"><div class="mc-top"><div class="mc-icon ic-blue">🌊</div><span class="layer-badge badge-new">New</span></div><h4>Sentiment velocity tracker</h4><p>Tracks whether public sentiment is improving or degrading over time. "Positive mentions of [niche] up 23% MoM" vs "Complaint volume doubling every quarter — trend is souring."</p></div>
+  </div>
+
+  <!-- MODULES: SURVIVAL INTELLIGENCE -->
+  <div class="section-sep reveal"><div class="section-sep-line"></div><div class="section-sep-label">Layer 3 — Survival Intelligence</div><div class="section-sep-line"></div></div>
+  <div class="module-grid reveal">
+    <div class="module-card mc-red"><div class="mc-top"><div class="mc-icon ic-red">📉</div><span class="layer-badge badge-critical">Critical</span></div><h4>Dying trend detector</h4><p>Declining search volume, shrinking community size, commoditisation signals, and pivoting incumbents.</p></div>
+    <div class="module-card mc-red"><div class="mc-top"><div class="mc-icon ic-red">🤖</div><span class="layer-badge badge-critical">Critical</span></div><h4>AI disruption risk score</h4><p>Names the exact AI model threatening your niche. "GPT-5 with Code Interpreter replicates 60% of your value prop. API costs dropped 80% in 12 months — wrapper margins approaching zero."</p></div>
+    <div class="module-card mc-red"><div class="mc-top"><div class="mc-icon ic-red">⚠</div><span class="layer-badge badge-critical">Critical</span></div><h4>Platform dependency risk</h4><p>What percentage of the market relies on a single platform? One algorithm change risk scored 0–10.</p></div>
+    <div class="module-card mc-red"><div class="mc-top"><div class="mc-icon ic-red">🏙</div><span class="layer-badge badge-critical">Critical</span></div><h4>Saturation score</h4><p>Crowded at the entry point vs white space in sub-niches. Includes "first to $1M" difficulty estimate.</p></div>
+    <div class="module-card mc-red"><div class="mc-top"><div class="mc-icon ic-red">⚖</div><span class="layer-badge badge-critical">Critical</span></div><h4>Legal & regulatory — jurisdiction matrix</h4><p>Per-country risk breakdown: "Legal in US, GDPR-complicated in EU, grey area in UK, banned in China." Includes compliance cost estimates and pending legislation timelines.</p></div>
+    <div class="module-card mc-red"><div class="mc-top"><div class="mc-icon ic-red">🦍</div><span class="layer-badge badge-critical">Critical</span></div><h4>Gorilla competitor radar</h4><p>Amazon, Google, and VC-funded startups entering adjacent spaces — with funding dates, hire velocity, and "Days Since Gorilla Entry" countdown.</p></div>
+    <div class="module-card mc-red"><div class="mc-top"><div class="mc-icon ic-red">🏋️</div><span class="layer-badge badge-new">New</span></div><h4>Execution difficulty score</h4><p>Can YOU build this? Cross-references your budget, skills, and timeline. "Requires iOS+Android dev ($80k) + HIPAA compliance (6 months). At your budget of $2-10k, execution probability: 12%."</p></div>
+    <div class="module-card mc-red"><div class="mc-top"><div class="mc-icon ic-red">🎲</div><span class="layer-badge badge-new">New</span></div><h4>Scenario simulator</h4><p>"If Google bans affiliate links → revenue drops 78%. If API prices rise 3x → margin hits -4%. If Amazon enters → CAC triples." Named threats, quantified consequences.</p></div>
+  </div>
+
+  <!-- RISK RADAR -->
+  <div class="radar-section reveal">
+    <svg class="radar-svg" width="220" height="220" viewBox="0 0 220 220">
+      <g transform="translate(110,110)">
+        <polygon points="0,-90 78,-45 78,45 0,90 -78,45 -78,-45" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <polygon points="0,-60 52,-30 52,30 0,60 -52,30 -52,-30" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <polygon points="0,-30 26,-15 26,15 0,30 -26,15 -26,-15" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <line x1="0" y1="-90" x2="0" y2="90" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+        <line x1="-78" y1="-45" x2="78" y2="45" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+        <line x1="-78" y1="45" x2="78" y2="-45" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+        <polygon id="radar-poly" points="0,-63 55,-27 47,32 0,54 -39,27 -62,-18" fill="rgba(200,242,100,0.08)" stroke="var(--accent)" stroke-width="1.5" style="opacity:0;transition:opacity 1s ease 0.3s"/>
+        <circle cx="0" cy="-63" r="3" fill="var(--accent)"/><circle cx="55" cy="-27" r="3" fill="var(--accent5)"/>
+        <circle cx="47" cy="32" r="3" fill="var(--red)"/><circle cx="0" cy="54" r="3" fill="var(--accent4)"/>
+        <circle cx="-39" cy="27" r="3" fill="var(--accent2)"/><circle cx="-62" cy="-18" r="3" fill="var(--accent3)"/>
+        <text x="0" y="-96" text-anchor="middle" fill="var(--muted)" font-size="9" font-family="var(--mono)">AI Risk</text>
+        <text x="88" y="-42" text-anchor="start" fill="var(--muted)" font-size="9" font-family="var(--mono)">Saturation</text>
+        <text x="88" y="48" text-anchor="start" fill="var(--muted)" font-size="9" font-family="var(--mono)">Platform</text>
+        <text x="0" y="105" text-anchor="middle" fill="var(--muted)" font-size="9" font-family="var(--mono)">Regulatory</text>
+        <text x="-88" y="48" text-anchor="end" fill="var(--muted)" font-size="9" font-family="var(--mono)">Decay</text>
+        <text x="-88" y="-42" text-anchor="end" fill="var(--muted)" font-size="9" font-family="var(--mono)">Gorilla</text>
+      </g>
+    </svg>
+    <div class="radar-info">
+      <h3>Risk Radar — 6-axis threat visualisation</h3>
+      <p>Every report generates a risk radar mapping your niche across six critical threat dimensions. Each axis is scored independently with sources so you can see exactly where danger lies.</p>
+      <div class="radar-legend">
+        <div class="radar-leg"><div class="radar-leg-dot" style="background:var(--accent)"></div>AI disruption risk</div>
+        <div class="radar-leg"><div class="radar-leg-dot" style="background:var(--accent5)"></div>Market saturation</div>
+        <div class="radar-leg"><div class="radar-leg-dot" style="background:var(--red)"></div>Platform dependency</div>
+        <div class="radar-leg"><div class="radar-leg-dot" style="background:var(--accent4)"></div>Regulatory exposure</div>
+        <div class="radar-leg"><div class="radar-leg-dot" style="background:var(--accent2)"></div>Trend decay rate</div>
+        <div class="radar-leg"><div class="radar-leg-dot" style="background:var(--accent3)"></div>Gorilla competitor threat</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODULES: COMPETITOR INTELLIGENCE -->
+  <div class="section-sep reveal"><div class="section-sep-line"></div><div class="section-sep-label">Layer 4 — Competitor Intelligence</div><div class="section-sep-line"></div></div>
+  <div class="module-grid reveal">
+    <div class="module-card mc-coral"><div class="mc-top"><div class="mc-icon ic-coral">🔍</div><span class="layer-badge badge-core">Core</span></div><h4>Deep competitor profiles</h4><p>Revenue estimate, traffic range, pricing tiers, ad spend signal, review sentiment, and documented weaknesses — not just logos.</p></div>
+    <div class="module-card mc-coral"><div class="mc-top"><div class="mc-icon ic-coral">🕳</div><span class="layer-badge badge-core">Core</span></div><h4>Market gap analysis</h4><p>Specific underserved segments, complaints competitors' customers voice repeatedly, and price ranges nobody occupies.</p></div>
+    <div class="module-card mc-coral"><div class="mc-top"><div class="mc-icon ic-coral">🔑</div><span class="layer-badge badge-core">Core</span></div><h4>SEO & content white space</h4><p>Keywords with intent but no authoritative result. Topics competitors rank for with thin content you could beat.</p></div>
+    <div class="module-card mc-coral"><div class="mc-top"><div class="mc-icon ic-coral">💰</div><span class="layer-badge badge-core">Core</span></div><h4>Pricing spectrum map</h4><p>Full range from free tier through ultra-premium — including psychological anchors, price elasticity estimates, and what "feels overpriced" in this niche.</p></div>
+    <div class="module-card mc-coral"><div class="mc-top"><div class="mc-icon ic-coral">🔄</div><span class="layer-badge badge-new">New</span></div><h4>Substitute threat map</h4><p>Your real competitor might not be another SaaS — it's spreadsheets + manual processes. Maps indirect competitors and inertia: "45% of your target currently solves this with Notion + Zapier."</p></div>
+    <div class="module-card mc-coral"><div class="mc-top"><div class="mc-icon ic-coral">🚀</div><span class="layer-badge badge-new">New</span></div><h4>Competitor velocity tracker</h4><p>Where are competitors heading? Hiring signals (+40% eng headcount = product acceleration), funding events, feature shipping rate, and expansion into adjacent markets.</p></div>
+  </div>
+
+  <!-- MODULES: UNIT ECONOMICS -->
+  <div class="section-sep reveal"><div class="section-sep-line"></div><div class="section-sep-label">Layer 5 — Unit Economics Intelligence</div><div class="section-sep-line"></div></div>
+  <div class="unit-econ reveal">
+    <div class="intake-header"><div class="intake-header-left"><span class="layer-badge badge-upgraded">Financial</span><div><h3>Unit economics estimation module</h3><p>Benchmark data from comparable niches — not guesses</p></div></div></div>
+    <div class="module-grid" style="padding:20px 24px;margin-bottom:0;">
+      <div class="module-card mc-amber"><div class="mc-top"><div class="mc-icon ic-amber">💸</div><span class="layer-badge badge-core">Core</span></div><h4>CAC benchmark range</h4><p>Typical customer acquisition cost for this niche across channels — based on comparable market data.</p></div>
+      <div class="module-card mc-amber"><div class="mc-top"><div class="mc-icon ic-amber">♻</div><span class="layer-badge badge-core">Core</span></div><h4>LTV / churn benchmarks</h4><p>Average customer lifetime value and churn rate for comparable offers — with confidence interval.</p></div>
+      <div class="module-card mc-amber"><div class="mc-top"><div class="mc-icon ic-amber">✅</div><span class="layer-badge badge-core">Core</span></div><h4>LTV:CAC viability verdict</h4><p>Green / amber / red signal: is the math structurally viable before you spend a dollar testing?</p></div>
+      <div class="module-card mc-amber"><div class="mc-top"><div class="mc-icon ic-amber">📊</div><span class="layer-badge badge-new">New</span></div><h4>Break-even calculator</h4><p>"At $29/mo with 5% churn and $45 CAC, you need 847 paying customers to break even. At your growth rate, that’s 14 months." Hard math, not hope.</p></div>
+      <div class="module-card mc-amber"><div class="mc-top"><div class="mc-icon ic-amber">🔥</div><span class="layer-badge badge-new">New</span></div><h4>Burn rate scenario modeller</h4><p>Uses YOUR budget from Step 2. "At $5k, you can sustain paid acquisition for 2 months. Organic-only extends runway to 8 months. Critical decision point: Month 3."</p></div>
+      <div class="module-card mc-amber"><div class="mc-top"><div class="mc-icon ic-amber">🎯</div><span class="layer-badge badge-new">New</span></div><h4>Optimal price point engine</h4><p>"Competitors charge $19–$79/mo. Willingness-to-pay data suggests $29/mo entry with $149/yr annual upsell. Below $19 signals low quality. Above $49 requires enterprise features."</p></div>
+    </div>
+  </div>
+
+  <!-- MODULES: GTM -->
+  <div class="section-sep reveal"><div class="section-sep-line"></div><div class="section-sep-label">Layer 6 — Offer & GTM Intelligence</div><div class="section-sep-line"></div></div>
+  <div class="module-grid reveal">
+    <div class="module-card mc-green"><div class="mc-top"><div class="mc-icon ic-green">💡</div><span class="layer-badge badge-core">Core</span></div><h4>Offer ideas with pricing logic</h4><p>Products, services, bundles — matched to pain points, with revenue model options and price anchors from this niche.</p></div>
+    <div class="module-card mc-green"><div class="mc-top"><div class="mc-icon ic-green">📍</div><span class="layer-badge badge-core">Core</span></div><h4>Personalised GTM plan</h4><p>Week-by-week launch sequence built around YOUR budget, assets, and timeline — not a generic 90-day plan.</p></div>
+    <div class="module-card mc-green"><div class="mc-top"><div class="mc-icon ic-green">🎣</div><span class="layer-badge badge-upgraded">Upgraded</span></div><h4>Platform-specific hooks & angles</h4><p>TikTok hook (pattern interrupt + 3-sec open), LinkedIn hook (credibility + contrarian take), Email subject line (curiosity gap) — format-native, not generic copy.</p></div>
+    <div class="module-card mc-green"><div class="mc-top"><div class="mc-icon ic-green">📡</div><span class="layer-badge badge-upgraded">Upgraded</span></div><h4>Channel map + decay signals</h4><p>Where your audience is, ranked by ROI — PLUS channel health warnings: "Facebook Groups: saturated since 2023, engagement -15% YoY. Discord: emerging, 4x engagement."</p></div>
+    <div class="module-card mc-green"><div class="mc-top"><div class="mc-icon ic-green">🧪</div><span class="layer-badge badge-upgraded">Upgraded</span></div><h4>Validation roadmap (with costs)</h4><p>The 3 cheapest experiments: "$0/2hrs: Reddit AMA. $50/3 days: Meta ad test. $20/1 day: Fake door landing page." Budget + time + success criteria for each.</p></div>
+    <div class="module-card mc-green"><div class="mc-top"><div class="mc-icon ic-green">🔭</div><span class="layer-badge badge-upgraded">Upgraded</span></div><h4>Future trends (with triggers)</h4><p>Not vague predictions — tied to specific events: "When EU AI Act enforcement begins (Aug 2026), unregulated tools face shutdown. When Vision Pro hits $999, spatial commerce activates."</p></div>
+    <div class="module-card mc-green"><div class="mc-top"><div class="mc-icon ic-green">🤝</div><span class="layer-badge badge-new">New</span></div><h4>Distribution leverage map</h4><p>Beyond direct acquisition: partnerships, integrations, affiliates, white-labeling. "Integrate with Shopify = instant access to 4M merchants. White-label to agencies = B2B2C play."</p></div>
+    <div class="module-card mc-green"><div class="mc-top"><div class="mc-icon ic-green">📀</div><span class="layer-badge badge-new">New</span></div><h4>Revenue model fit matrix</h4><p>Subscription vs marketplace vs one-time vs freemium — analysed for THIS niche. "Subscription: $X LTV, 5% churn. One-time: $Y per sale. Marketplace: $Z take rate. Recommendation: ___"</p></div>
+  </div>
+
+  <!-- SCORECARD OUTPUT -->
+  <div class="section-sep reveal" id="output"><div class="section-sep-line"></div><div class="section-sep-label">Output — Market Viability Scorecard</div><div class="section-sep-line"></div></div>
+  <div class="scorecard reveal">
+    <div class="scorecard-header">
+      <span class="layer-badge badge-critical" style="margin-bottom:12px;display:inline-block;">Adversarial Scoring</span>
+      <h3>Tri-Agent Debate Scorecard</h3>
+      <p>Your idea's viability is debated by three independent AI agents: The Builder (opportunity), The Cynic (risk), and The Operator (execution feasibility). You see the raw conflict and the final resolution.</p>
+    </div>
+    <div class="scorecard-body">
+      <div class="score-row"><div class="score-indicator si-green"></div><div class="score-name"><strong>Builder Agent:</strong> High demand, clear pain points. <span style="font-size:10px;color:var(--accent);border:1px solid rgba(200,242,100,0.3);padding:2px 6px;border-radius:4px;margin-left:6px;">GO</span></div><div class="score-track"><div class="score-fill" style="width:85%;background:var(--accent)"></div></div><div class="score-value">85 / 100</div></div>
+      <div class="score-row"><div class="score-indicator si-red"></div><div class="score-name"><strong>Cynic Agent:</strong> No moat, easily cloned by OpenAI. <span style="font-size:10px;color:var(--red);border:1px solid rgba(255,75,107,0.3);padding:2px 6px;border-radius:4px;margin-left:6px;">KILL</span></div><div class="score-track"><div class="score-fill" style="width:90%;background:var(--red)"></div></div><div class="score-value">90 / 100 (Risk)</div></div>
+      <div class="score-row"><div class="score-indicator si-purple"></div><div class="score-name"><strong>Operator Agent:</strong> At your budget ($5k), you can't build the iOS app this requires. Execution probability: 12%. <span style="font-size:10px;color:var(--accent2);border:1px solid rgba(124,111,255,0.3);padding:2px 6px;border-radius:4px;margin-left:6px;">HARD</span></div><div class="score-track"><div class="score-fill" style="width:72%;background:var(--accent2)"></div></div><div class="score-value">72 / 100 (Difficulty)</div></div>
+      <div class="score-row" style="background:rgba(255,255,255,0.02);padding:14px;border-radius:8px;margin:10px 0;"><div class="score-indicator si-amber"></div><div class="score-name" style="color:var(--text);"><strong>Final Resolution:</strong> <span style="color:var(--muted2)">GO if you secure exclusive data rights. PIVOT if you can't raise $50k. KILL if neither condition is met within 90 days.</span></div></div>
+      <div class="score-row"><div class="score-indicator si-amber"></div><div class="score-name">Entry barrier (for you specifically)</div><div class="score-track"><div class="score-fill" style="width:55%;background:var(--accent5)"></div></div><div class="score-value">Easy / Moderate / Hard</div></div>
+      <div class="score-row"><div class="score-indicator si-green"></div><div class="score-name">Monetisation potential</div><div class="score-track"><div class="score-fill" style="width:80%;background:var(--accent)"></div></div><div class="score-value">$ to $$$$$ + LTV estimate</div></div>
+      <div class="score-row"><div class="score-indicator si-amber"></div><div class="score-name">Trend health</div><div class="score-track"><div class="score-fill" style="width:65%;background:var(--accent5)"></div></div><div class="score-value">Growing / Stable / Fading</div></div>
+      <div class="score-row"><div class="score-indicator si-purple"></div><div class="score-name">Unit economics viability</div><div class="score-track"><div class="score-fill" style="width:50%;background:var(--accent2)"></div></div><div class="score-value">LTV:CAC verdict</div></div>
+      <div class="score-row"><div class="score-indicator si-green"></div><div class="score-name">Founder–market fit score</div><div class="score-track"><div class="score-fill" style="width:0%;background:var(--accent)" id="fit-bar"></div></div><div class="score-value" id="fit-score">0 / 6</div></div>
+      <div class="score-row"><div class="score-indicator si-amber"></div><div class="score-name">Platform dependency risk</div><div class="score-track"><div class="score-fill" style="width:45%;background:var(--accent5)"></div></div><div class="score-value">Score 0–10</div></div>
+      <div class="score-row"><div class="score-indicator si-green"></div><div class="score-name">Time to first revenue</div><div class="score-track"><div class="score-fill" style="width:60%;background:var(--accent)"></div></div><div class="score-value">Days / Weeks / Months</div></div>
+    </div>
+  </div>
+
+  <!-- ANTI-COMMODITISATION BLUEPRINT -->
+  <div class="section-sep reveal"><div class="section-sep-line"></div><div class="section-sep-label">Layer 7 — Anti-Commoditisation Blueprint</div><div class="section-sep-line"></div></div>
+  
+  <div class="pivot-engine reveal">
+    <div class="pivot-header">
+      <span class="layer-badge badge-new" style="margin-bottom:12px;display:inline-block;">Crucible Feature</span>
+      <h3>The Auto-Pivot Engine (3 ranked options)</h3>
+      <p>Generic ideas die fast. If your market is too crowded, the Crucible generates three ranked pivot strategies — each with a feasibility check against YOUR skills and budget from Step 2.</p>
+    </div>
+    <div class="pivot-row">
+      <div class="pivot-box dead">
+        <span class="pivot-badge badge-dead">Discarded</span>
+        <h4>General "AI Copywriting Tool"</h4>
+        <p style="font-size:12px;color:var(--muted2);line-height:1.5;">A wrapper tool that writes blogs and ads for marketers.</p>
+        <div class="pivot-stat"><span>Saturation Score</span><span style="color:var(--red)">98% (Extreme)</span></div>
+        <div class="pivot-stat"><span>Disruption Risk</span><span style="color:var(--red)">High (OpenAI native)</span></div>
+      </div>
+      <div class="pivot-arrow">→</div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:10px;max-width:320px;">
+        <div class="pivot-box survived" style="flex:none;">
+          <span class="pivot-badge badge-survived">Pivot A — Best</span>
+          <h4>Compliance-Checked AI for Pharma</h4>
+          <p style="font-size:12px;color:var(--muted2);line-height:1.5;">Generates ad copy cross-referenced against FDA marketing guidelines.</p>
+          <div class="pivot-stat"><span>Saturation</span><span style="color:var(--accent)">12% (Wide open)</span></div>
+          <div class="pivot-stat"><span>Execution Fit</span><span style="color:var(--accent)">Matches your skills</span></div>
+        </div>
+        <div class="pivot-box" style="flex:none;border-color:rgba(244,200,74,0.3);">
+          <span class="pivot-badge" style="background:var(--accent5);color:var(--bg);">Pivot B</span>
+          <h4>AI Localisation Engine for E-commerce</h4>
+          <p style="font-size:12px;color:var(--muted2);line-height:1.5;">Auto-translates + culturally adapts product listings for MENA / LATAM markets.</p>
+          <div class="pivot-stat"><span>Saturation</span><span style="color:var(--accent5)">34% (Moderate)</span></div>
+          <div class="pivot-stat"><span>Execution Fit</span><span style="color:var(--accent5)">Needs language expertise</span></div>
+        </div>
+        <div class="pivot-box" style="flex:none;border-color:rgba(124,111,255,0.3);">
+          <span class="pivot-badge" style="background:var(--accent2);color:white;">Pivot C</span>
+          <h4>Legal Brief Drafting for Solo Attorneys</h4>
+          <p style="font-size:12px;color:var(--muted2);line-height:1.5;">AI drafts motions + case summaries for small-firm lawyers. Citation-verified.</p>
+          <div class="pivot-stat"><span>Saturation</span><span style="color:var(--accent2)">22% (Low)</span></div>
+          <div class="pivot-stat"><span>Execution Fit</span><span style="color:var(--red)">Needs legal domain knowledge</span></div>
+        </div>
+      </div>
+    </div>
+    <button class="run-pivot-btn" onclick="this.innerHTML='Generating 3 pivots...'; setTimeout(()=>this.innerHTML='3 pivot options generated ✓', 1500)">Generate Pivot Options →</button>
+  </div>
+
+  <div class="moat-grid reveal">
+    <div class="moat-card">
+      <h4>🗄️ Data-Advantage Strategy</h4>
+      <p>How to structure your app so users feed you proprietary data that OpenAI cannot scrape (e.g., private financial models, localized inventory).</p>
+    </div>
+    <div class="moat-card">
+      <h4>🔗 Workflow Deep-Integration</h4>
+      <p>How to embed your product into a painful legacy system (like Salesforce or Epic) so ripping you out costs more than keeping you.</p>
+    </div>
+    <div class="moat-card">
+      <h4>🔄 Network Effect Blueprint</h4>
+      <p>How to design your product so each new user makes it more valuable for existing users. Marketplace: more sellers = more buyers. Community: more members = better answers.</p>
+    </div>
+    <div class="moat-card">
+      <h4>🏦 Regulatory Moat Strategy</h4>
+      <p>How to use compliance (SOC2, HIPAA, GDPR, FDA) as a competitive wall. "HIPAA cert costs $50k + 6 months. That's a barrier 90% of indie competitors won't cross."</p>
+    </div>
+    <div class="moat-card">
+      <h4>👥 Community Moat Playbook</h4>
+      <p>Users stay because of social bonds, not features. "Build a Discord with 500+ active members — switching cost becomes social, not technical."</p>
+    </div>
+    <div class="moat-card">
+      <h4>🔒 Switching Cost Architecture</h4>
+      <p>How to structure your product so leaving is painful. "50 reports stored, 200 contacts exported, 12 automations built — migration cost = 40+ hours. That's your moat."</p>
+    </div>
+  </div>
+
+  <!-- LAYER 8: PERSONA-SPECIFIC INTELLIGENCE (PREDICTIVE ENGINE SIMULATION) -->
+  <div class="section-sep reveal" id="persona-sep"><div class="section-sep-line"></div><div class="section-sep-label">Layer 8 — Developer Intelligence (Simulated)</div><div class="section-sep-line"></div></div>
+  
+  <div class="reveal" style="text-align:center; padding: 24px 20px 10px; background:var(--surface2); border:1px solid var(--border); border-radius:var(--r-lg); margin-bottom: 24px;">
+    <h3 style="font-size:15px; font-weight:500; margin-bottom:8px; display:inline-flex; align-items:center; gap:8px;"><span class="layer-badge badge-new" style="color:var(--accent4);border-color:rgba(74,244,184,0.3)">Auto-Routing</span> Predictive Archetype Engine</h3>
+    <p style="font-size:13px; color:var(--muted2); margin-bottom:20px; max-width: 600px; margin-left: auto; margin-right: auto;">The Crucible reads your intake form (Step 2) to automatically predict your go-to-market archetype. It then instantly re-compiles Layer 8 to target your specific blind spots. <strong style="color:var(--text)">Test the simulator below:</strong></p>
+    
+    <div class="persona-selector" id="persona-selector" style="margin-bottom:0; background:var(--bg); padding:10px; border-radius:30px; border:1px solid var(--border); display:inline-flex; gap: 4px;">
+      <div class="p-tab active" onclick="switchPersona('dev', this)" style="border:none; padding: 8px 16px;"><span class="p-icon">👨‍💻</span> Dev</div>
+      <div class="p-tab" onclick="switchPersona('marketer', this)" style="border:none; padding: 8px 16px;"><span class="p-icon">📈</span> Marketer</div>
+      <div class="p-tab" onclick="switchPersona('creator', this)" style="border:none; padding: 8px 16px;"><span class="p-icon">✍️</span> Creator</div>
+      <div class="p-tab" onclick="switchPersona('consultant', this)" style="border:none; padding: 8px 16px;"><span class="p-icon">🏛️</span> Consultant</div>
+      <div class="p-tab" onclick="switchPersona('general', this)" style="border:none; padding: 8px 16px;"><span class="p-icon">👤</span> Basic</div>
+    </div>
+  </div>
+
+  <div class="module-grid cols-3 reveal" id="persona-grid">
+    <!-- Default state: Dev -->
+    <div class="module-card mc-blue"><div class="mc-top"><div class="mc-icon ic-blue">🐙</div><span class="layer-badge badge-new" style="color:var(--accent4);border-color:rgba(74,244,184,0.3)">Tech</span></div><h4>GitHub / StackOverflow Audit</h4><p>Scrapes open-source alternatives and technical friction points to ensure you aren't building a tool that devs just script themselves.</p></div>
+    <div class="module-card mc-blue"><div class="mc-top"><div class="mc-icon ic-blue">🔌</div><span class="layer-badge badge-new" style="color:var(--accent4);border-color:rgba(74,244,184,0.3)">Tech</span></div><h4>API Dependency Risk</h4><p>Quantifies your platform risk if OpenAI, Stripe, or Google changes their pricing or TOS tomorrow.</p></div>
+    <div class="module-card mc-blue"><div class="mc-top"><div class="mc-icon ic-blue">🧱</div><span class="layer-badge badge-new" style="color:var(--accent4);border-color:rgba(74,244,184,0.3)">Tech</span></div><h4>Tech Stack Saturation</h4><p>Analyzes competitor architectures to find out if your planned stack is a competitive moat or a liability.</p></div>
+  </div>
+
+  <!-- COMPARISON MATRIX -->
+  <div class="section-sep reveal"><div class="section-sep-line"></div><div class="section-sep-label">How MarketPulse Compares</div><div class="section-sep-line"></div></div>
+  <div class="output-card reveal" style="overflow-x:auto;">
+    <table class="compare-table">
+      <thead><tr><th>Feature</th><th class="compare-highlight">MarketPulse</th><th>Generic AI (ChatGPT)</th><th>Expensive Consultancy</th></tr></thead>
+      <tbody>
+        <tr><td>Source citations on every claim</td><td class="compare-highlight check">✓ Always</td><td class="cross">✗ Never</td><td class="check">✓ Usually</td></tr>
+        <tr><td>Confidence intervals on data</td><td class="compare-highlight check">✓ Built-in</td><td class="cross">✗ No</td><td class="partial">◐ Sometimes</td></tr>
+        <tr><td>Personalised to founder context</td><td class="compare-highlight check">✓ 9 dimensions</td><td class="cross">✗ Generic</td><td class="check">✓ Manual</td></tr>
+        <tr><td>Unit economics analysis</td><td class="compare-highlight check">✓ CAC/LTV/Churn</td><td class="cross">✗ No</td><td class="check">✓ Yes</td></tr>
+        <tr><td>AI persona simulation</td><td class="compare-highlight check">✓ 1,000+ profiles</td><td class="cross">✗ No</td><td class="cross">✗ No</td></tr>
+        <tr><td>Live social listening</td><td class="compare-highlight check">✓ Real-time</td><td class="cross">✗ Static</td><td class="partial">◐ Periodic</td></tr>
+        <tr><td>Risk radar (6-axis)</td><td class="compare-highlight check">✓ Visual</td><td class="cross">✗ No</td><td class="partial">◐ Text-only</td></tr>
+        <tr><td>Time to report</td><td class="compare-highlight" style="color:var(--accent)">~4 minutes</td><td style="color:var(--accent5)">~20 min (DIY)</td><td style="color:var(--red)">2–6 weeks</td></tr>
+        <tr><td>Cost per report</td><td class="compare-highlight" style="color:var(--accent)">From $0 (free tier)</td><td style="color:var(--accent5)">$20/mo subscription</td><td style="color:var(--red)">$5,000–$50,000</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SAMPLE REPORT PREVIEW -->
+  <div class="output-card reveal">
+    <div class="output-header">
+      <div><h3>Sample report preview — see before you generate</h3><p>Every report includes sourced data, confidence intervals, and actionable intelligence. Here's a peek at what you get.</p></div>
+      <div class="output-live-badge"><span class="live-dot"></span>Live updates</div>
+    </div>
+    <div class="sample-preview">
+      <div class="sample-toggle" onclick="toggleSample(this)">📄 Example: "AI tools for freelance copywriters" — expand to preview <span class="arrow">▼</span></div>
+      <div class="sample-body" id="sample-body">
+        <div class="sample-content">
+          <div class="sample-row"><div class="sample-label">TAM</div><div class="sample-val">$2.8B – $5.1B <span style="color:var(--accent5)">(medium confidence)</span><br><span class="sample-cite">Sources: Grand View Research 2024, Statista Market Insights</span></div></div>
+          <div class="sample-row"><div class="sample-label">SAM</div><div class="sample-val">$420M – $780M <span style="color:var(--accent5)">(medium confidence)</span><br><span class="sample-cite">Sources: Upwork data, Fiverr annual report 2024</span></div></div>
+          <div class="sample-row"><div class="sample-label">Top Pain</div><div class="sample-val">"I spend 3 hours writing what AI could draft in 10 minutes but I'm scared it sounds robotic"<br><span class="sample-cite">Reddit r/copywriting (147 upvotes), Trustpilot review cluster</span></div></div>
+          <div class="sample-row"><div class="sample-label">AI Risk</div><div class="sample-val"><span style="color:var(--accent5)">Medium-High (6/10)</span> — AI accelerates demand for tools but commoditises basic copywriting<br><span class="sample-cite">⚠ Conflict: McKinsey (bullish) vs Forrester (bearish) — flagged for review</span></div></div>
+          <div class="sample-row"><div class="sample-label">CAC Range</div><div class="sample-val">$18 – $45 per customer <span style="color:var(--accent4)">(high confidence)</span><br><span class="sample-cite">Sources: SaaS benchmarks, SEMrush ad data for "AI copywriting"</span></div></div>
+          <div class="sample-row"><div class="sample-label">LTV:CAC</div><div class="sample-val"><span style="color:var(--accent)">3.2x – 5.8x ✅ Viable</span><br><span class="sample-cite">Based on comparable SaaS tools: Jasper, Copy.ai churn benchmarks</span></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="output-formats" style="grid-template-columns: repeat(4, 1fr);">
+      <div class="format-card"><span class="format-icon">📄</span><h5>PDF report</h5><p>Fully sourced, print-ready with executive summary page + clickable bibliography appendix.</p></div>
+      <div class="format-card"><span class="format-icon">🔌</span><h5>Notion export</h5><p>Push as linked databases (Competitors ↔ Pain Points ↔ Channels) — not a flat page.</p></div>
+      <div class="format-card"><span class="format-icon">📬</span><h5>Slack digest</h5><p>Priority-tagged alerts: 🔴 "Competitor raised $10M" vs ℹ️ "New blog post." Pushed weekly.</p></div>
+      <div class="format-card"><span class="format-icon">📦</span><h5>JSON + Webhooks</h5><p>Full structured data with webhook support — receive pushes, don’t just pull exports.</p></div>
+      <div class="format-card" style="border-color:rgba(200,242,100,0.4); background:rgba(200,242,100,0.05); position:relative; overflow:hidden;">
+        <div style="position:absolute; top:-5px; right:-20px; background:var(--accent); color:var(--bg); font-family:var(--mono); font-size:9px; padding:2px 25px; transform:rotate(45deg); font-weight:600;">NEW</div>
+        <span class="format-icon">🌐</span>
+        <h5 style="color:var(--accent)">Web Dashboard</h5>
+        <p>A standalone, interactive HTML/JS dashboard just like this page.</p>
+      </div>
+      <div class="format-card" style="border-color:rgba(124,111,255,0.4); background:rgba(124,111,255,0.05); position:relative; overflow:hidden;">
+        <div style="position:absolute; top:-5px; right:-20px; background:var(--accent2); color:white; font-family:var(--mono); font-size:9px; padding:2px 25px; transform:rotate(45deg); font-weight:600;">NEW</div>
+        <span class="format-icon">💬</span>
+        <h5 style="color:var(--accent2)">Report Chat</h5>
+        <p>After generation, ask follow-up questions grounded in YOUR specific data. Not generic AI.</p>
+      </div>
+      <div class="format-card" style="border-color:rgba(255,107,74,0.4); background:rgba(255,107,74,0.05); position:relative; overflow:hidden;">
+        <div style="position:absolute; top:-5px; right:-20px; background:var(--accent3); color:white; font-family:var(--mono); font-size:9px; padding:2px 25px; transform:rotate(45deg); font-weight:600;">NEW</div>
+        <span class="format-icon">⚔️</span>
+        <h5 style="color:var(--accent3)">Niche Duel</h5>
+        <p>Input 2–3 ideas, get a side-by-side comparison across all layers. Winner declared with reasoning.</p>
+      </div>
+    </div>
+    <div class="validation-rows">
+      <div class="val-row"><div class="val-num">01</div><div class="val-content"><strong>Competitor price change alerts</strong><span>When a tracked competitor changes their pricing or launches a new offer — you get notified.</span></div><div class="val-tag" style="background:rgba(74,244,184,0.08);color:var(--accent4);border:1px solid rgba(74,244,184,0.2);">Included</div></div>
+      <div class="val-row"><div class="val-num">02</div><div class="val-content"><strong>30-day signal refresh</strong><span>Trend health and saturation scores re-run automatically every 30 days so your research never expires.</span></div><div class="val-tag" style="background:rgba(74,244,184,0.08);color:var(--accent4);border:1px solid rgba(74,244,184,0.2);">Included</div></div>
+      <div class="val-row"><div class="val-num">03</div><div class="val-content"><strong>Report Q&A — ask anything about your niche</strong><span>After generation, chat with your report. "What's the cheapest way to test this?" — answers grounded in your research.</span></div><div class="val-tag" style="background:rgba(74,244,184,0.08);color:var(--accent4);border:1px solid rgba(74,244,184,0.2);">Included</div></div>
+      <div class="val-row"><div class="val-num">04</div><div class="val-content"><strong>Niche Duel — compare 2–3 ideas head-to-head</strong><span>Can't decide between two niches? Input both and get a side-by-side scorecard across all 8 layers. Winner declared with reasoning.</span></div><div class="val-tag" style="background:rgba(124,111,255,0.08);color:var(--accent2);border:1px solid rgba(124,111,255,0.2);">New</div></div>
+      <div class="val-row"><div class="val-num">05</div><div class="val-content"><strong>Data transparency — "What we couldn't find"</strong><span>When the engine has insufficient data, it says so. No silent low-confidence output. Each module gets a confidence badge: High / Medium / Low.</span></div><div class="val-tag" style="background:rgba(124,111,255,0.08);color:var(--accent2);border:1px solid rgba(124,111,255,0.2);">New</div></div>
+      <div class="val-row"><div class="val-num">06</div><div class="val-content"><strong>Report Diff — track market changes over time</strong><span>Re-run the same niche months later and see exactly what changed: "Saturation +12%, CAC -8%, new gorilla competitor entered."</span></div><div class="val-tag" style="background:rgba(124,111,255,0.08);color:var(--accent2);border:1px solid rgba(124,111,255,0.2);">New</div></div>
+    </div>
+  </div>
+
+  <!-- PRICING -->
+  <div class="section-sep reveal" id="pricing"><div class="section-sep-line"></div><div class="section-sep-label">Pricing</div><div class="section-sep-line"></div></div>
+  <div class="pricing-grid reveal">
+    <div class="price-card">
+      <div class="price-name">Explorer</div>
+      <div class="price-amount">$0 <small>/ forever</small></div>
+      <div class="price-desc">Try the engine on one niche. See the report quality before committing.</div>
+      <ul class="price-features">
+        <li>1 full market report</li><li>All 40+ modules included</li><li>PDF export</li><li>Tri-agent scorecard</li><li>Source citations</li>
+      </ul>
+      <button class="price-btn">Start free →</button>
+    </div>
+    <div class="price-card featured">
+      <div class="price-name">Pro</div>
+      <div class="price-amount">$29 <small>/ month</small></div>
+      <div class="price-desc">For founders actively validating and launching. Unlimited reports + live updates.</div>
+      <ul class="price-features">
+        <li>Unlimited reports</li><li>Tri-agent scorecard + operator agent</li><li>AI persona simulation</li><li>Live social listening</li><li>Niche Duel (compare ideas)</li><li>Report Chat Q&A</li><li>30-day auto-refresh</li><li>Notion + Slack integration</li><li>Report Diff (track changes)</li>
+      </ul>
+      <button class="price-btn">Get Pro →</button>
+    </div>
+    <div class="price-card">
+      <div class="price-name">Agency</div>
+      <div class="price-amount">$99 <small>/ month</small></div>
+      <div class="price-desc">For agencies and teams running research for multiple clients or niches.</div>
+      <ul class="price-features">
+        <li>Everything in Pro</li><li>White-label PDF reports</li><li>Client workspace management</li><li>API + Webhooks (JSON)</li><li>Niche Duel (bulk comparison)</li><li>Custom branding</li><li>Priority support</li>
+      </ul>
+      <button class="price-btn">Contact sales →</button>
+    </div>
+  </div>
+
+  <!-- TESTIMONIALS -->
+  <div class="section-sep reveal"><div class="section-sep-line"></div><div class="section-sep-label">What Founders Say</div><div class="section-sep-line"></div></div>
+  <div class="testimonials reveal">
+    <div class="testimonial-card">
+      <p>"I was about to spend $8k on a consulting report. MarketPulse gave me more actionable data in 4 minutes — with sources I could actually click and verify."</p>
+      <div class="testimonial-author"><div class="testimonial-avatar">🧑‍💻</div><div><div class="testimonial-name">Alex K.</div><div class="testimonial-role">SaaS founder, pre-revenue</div></div></div>
+    </div>
+    <div class="testimonial-card">
+      <p>"The unit economics module saved me from a $40k mistake. My niche had a CAC 3x higher than I assumed. Better to know before you burn cash."</p>
+      <div class="testimonial-author"><div class="testimonial-avatar">👩‍🔬</div><div><div class="testimonial-name">Sarah M.</div><div class="testimonial-role">D2C brand founder</div></div></div>
+    </div>
+    <div class="testimonial-card">
+      <p>"The AI persona simulation blew my mind. I tested 3 pricing strategies against 1,000 synthetic buyers before writing a single line of copy."</p>
+      <div class="testimonial-author"><div class="testimonial-avatar">🧔</div><div><div class="testimonial-name">James R.</div><div class="testimonial-role">Agency strategist</div></div></div>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta-section reveal">
+    <h2 style="font-family:var(--serif);font-size:clamp(28px,4vw,42px);font-style:italic;margin-bottom:8px;">Ready to know your market?</h2>
+    <p style="color:var(--muted2);font-size:14px;margin-bottom:24px;">Start with a free report. No credit card required.</p>
+    <div class="cta-email-row">
+      <input type="email" placeholder="Your email address" id="cta-email">
+      <button class="cta-btn" id="cta-btn" onclick="startGeneration()">
+        <span>Generate market report</span>
+        <span style="font-size:18px;">→</span>
+      </button>
+    </div>
+    <div class="cta-sub">~4 minutes · 24 modules · All claims sourced · PDF + Notion + JSON</div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-col">
+      <h5>Product</h5>
+      <a href="#modules">Modules</a><a href="#output">Output formats</a><a href="#pricing">Pricing</a><a href="#">API docs</a>
+    </div>
+    <div class="footer-col">
+      <h5>Company</h5>
+      <a href="#">About</a><a href="#">Blog</a><a href="#">Careers</a><a href="#">Contact</a>
+    </div>
+    <div class="footer-col">
+      <h5>Legal</h5>
+      <a href="#">Privacy policy</a><a href="#">Terms of service</a><a href="#">Cookie policy</a>
+    </div>
+    <div class="footer-col">
+      <h5>Trust & Security</h5>
+      <div class="trust-badges">
+        <div class="trust-badge">🔒 256-bit SSL</div>
+        <div class="trust-badge">🇪🇺 GDPR compliant</div>
+        <div class="trust-badge">🛡️ SOC 2 Type II</div>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 MarketPulse. All rights reserved.</span>
+    <span style="font-family:var(--mono);font-size:10px;color:var(--muted);">Built with 🧠 for founders who hate guessing</span>
+  </div>
+</footer>
+
+<script>
+  // WIZARD
+  let currentStep = 0;
+  const totalSteps = 3;
+  function goStep(n) {
+    document.querySelectorAll('.wiz-panel').forEach((p,i) => { p.classList.toggle('active', i===n); });
+    document.querySelectorAll('.wiz-step').forEach((s,i) => {
+      s.classList.toggle('active', i===n);
+      s.classList.toggle('completed', i<n);
+      s.querySelector('.wiz-num').textContent = i<n ? '✓' : (i+1);
+    });
+    currentStep = n;
+    document.getElementById('wiz-back').style.visibility = n===0 ? 'hidden' : 'visible';
+    document.getElementById('wiz-next').textContent = n===totalSteps-1 ? 'Done ✓' : 'Next →';
+  }
+  function nextStep() { if(currentStep < totalSteps-1) goStep(currentStep+1); }
+  function prevStep() { if(currentStep > 0) goStep(currentStep-1); }
+
+  // TOGGLES
+  function toggle(el) { el.classList.toggle('active'); updateConf(); }
+  function toggleFit(row) {
+    row.classList.toggle('checked');
+    row.querySelector('.fit-checkbox').textContent = row.classList.contains('checked') ? '✓' : '';
+    updateFitScore(); updateConf();
+  }
+  function updateFitScore() {
+    const checked = document.querySelectorAll('.fit-row.checked').length;
+    document.getElementById('fit-bar').style.width = Math.round((checked/6)*100)+'%';
+    document.getElementById('fit-score').textContent = checked+' / 6';
+  }
+
+  // FIELD TRACKING
+  let fieldState = {f1:false,f2:false,f3:false,f4:false};
+  function trackFields() {
+    fieldState.f1 = document.getElementById('f1').value.trim().length > 10;
+    fieldState.f2 = document.getElementById('f2').value !== '';
+    fieldState.f3 = document.getElementById('f3').value !== '';
+    fieldState.f4 = (document.getElementById('f4') && document.getElementById('f4').value.trim().length > 3);
+    const filled = Object.values(fieldState).filter(Boolean).length;
+    document.getElementById('field-count').textContent = filled+' / 4 core fields';
+    updateConf();
+  }
+  function updateConf() {
+    const coreFields = Object.values(fieldState).filter(Boolean).length;
+    const fitChecked = document.querySelectorAll('.fit-row.checked').length;
+    const assetsSelected = document.querySelectorAll('#assets-group .active').length;
+    const score = Math.min(100, Math.round((coreFields/4)*40 + (fitChecked/6)*30 + Math.min(assetsSelected,3)/3*20 + 10));
+    document.getElementById('conf-fill').style.width = score+'%';
+    let note = '';
+    if(score<25) note='Start by describing your niche above to unlock the full intelligence engine.';
+    else if(score<50) note='Add your geography and stage — the engine personalises the GTM plan to your context.';
+    else if(score<75) note='Complete the founder–market fit check to unlock personalised opportunity scoring.';
+    else note='High-quality inputs. Your report will include personalised scoring and a context-aware GTM plan.';
+    document.getElementById('conf-note').textContent = note;
+  }
+
+  // SAMPLE PREVIEW
+  function toggleSample(el) {
+    el.classList.toggle('open');
+    document.getElementById('sample-body').classList.toggle('open');
+  }
+
+  // CTA GENERATION SIM
+  function startGeneration() {
+    const btn = document.getElementById('cta-btn');
+    const stages = ['Scanning niche data…','Analysing competitors…','Running AI personas…','Scoring viability…','Generating report…','✓ Complete'];
+    let i = 0;
+    btn.style.opacity = '0.7'; btn.style.pointerEvents = 'none';
+    btn.innerHTML = '<span>'+stages[0]+'</span>';
+    const iv = setInterval(() => {
+      i++;
+      if(i < stages.length) { btn.innerHTML = '<span>'+stages[i]+'</span>'; }
+      else { clearInterval(iv); btn.style.opacity = '1'; btn.style.pointerEvents = 'auto'; btn.innerHTML = '<span>Generate market report</span><span style="font-size:18px;">→</span>'; }
+    }, 800);
+  }
+
+  // SCROLL REVEAL
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if(e.isIntersecting) { e.target.classList.add('visible'); } });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+  // RADAR ANIMATION
+  const radarObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if(e.isIntersecting) { document.getElementById('radar-poly').style.opacity = '1'; } });
+  }, { threshold: 0.3 });
+  const rp = document.getElementById('radar-poly');
+  if(rp) radarObs.observe(rp.closest('.radar-section'));
+
+  // PERSONA SWITCHING LOGIC (PHASE 3)
+  const personaData = {
+    'dev': {
+      title: 'The AI that tries to kill your software idea<br><span>before you build it</span>',
+      sub: 'Stop coding SaaS wrappers nobody wants. Validation engine checks your architecture against API dependency risks and StackOverflow tech debt before you write a single line of code.',
+      layerName: 'Layer 8 — Developer Intelligence',
+      modules: `
+        <div class="module-card mc-blue"><div class="mc-top"><div class="mc-icon ic-blue">🐙</div><span class="layer-badge badge-new" style="color:var(--accent4);border-color:rgba(74,244,184,0.3)">Tech</span></div><h4>GitHub / StackOverflow Audit</h4><p>Scrapes open-source alternatives and technical friction points to ensure you aren't building a tool that devs just script themselves.</p></div>
+        <div class="module-card mc-blue"><div class="mc-top"><div class="mc-icon ic-blue">🔌</div><span class="layer-badge badge-new" style="color:var(--accent4);border-color:rgba(74,244,184,0.3)">Tech</span></div><h4>API Dependency Risk</h4><p>Quantifies your platform risk if OpenAI, Stripe, or Google changes their pricing or TOS tomorrow.</p></div>
+        <div class="module-card mc-blue"><div class="mc-top"><div class="mc-icon ic-blue">🧱</div><span class="layer-badge badge-new" style="color:var(--accent4);border-color:rgba(74,244,184,0.3)">Tech</span></div><h4>Tech Stack Saturation</h4><p>Analyzes competitor architectures to find out if your planned stack is a competitive moat or a liability.</p></div>
+        <div class="module-card mc-blue"><div class="mc-top"><div class="mc-icon ic-blue">⚖️</div><span class="layer-badge badge-upgraded" style="color:var(--accent5);border-color:rgba(244,200,74,0.3)">New</span></div><h4>Build vs Buy Decision Matrix</h4><p>"You could build this in 3 weeks. Maintenance = 8 hrs/week. 12-month TCO: $14k. Buying existing tool: $348/yr. Verdict: Buy." Hard math for every component.</p></div>
+        <div class="module-card mc-blue"><div class="mc-top"><div class="mc-icon ic-blue">📢</div><span class="layer-badge badge-upgraded" style="color:var(--accent5);border-color:rgba(244,200,74,0.3)">New</span></div><h4>OSS Cannibalisation Risk</h4><p>"4 open-source repos do 70% of what you plan to charge for. Your paid layer must cover the 30% that's genuinely hard to replicate."</p></div>
+      `,
+      sampleTitle: '📄 Example: "API wrapper for real estate data" — expand to preview <span class="arrow">▼</span>',
+      sample: `
+        <div class="sample-row"><div class="sample-label">TAM</div><div class="sample-val">$1.2B – $2.4B <span style="color:var(--accent5)">(medium conf)</span></div></div>
+        <div class="sample-row"><div class="sample-label">Top Pain</div><div class="sample-val">"Zillow API is too restrictive, ReatyMole is too expensive for startups."</div></div>
+        <div class="sample-row"><div class="sample-label">AI Risk</div><div class="sample-val"><span style="color:var(--red)">High (9/10)</span> — LLMs with browsing tools bypass the need for structured API aggregators completely.</div></div>
+        <div class="sample-row"><div class="sample-label">Tech Debt</div><div class="sample-val">High maintenance burden. 12 scraped schemas change weekly.</div></div>
+      `
+    },
+    'marketer': {
+      title: 'The AI that tries to kill your campaign<br><span>before you launch it</span>',
+      sub: "Don't guess on your next client strategy. The Crucible engine instantly generates a data-backed GTM blueprint, ad-library teardown, and proven hooks for any niche.",
+      layerName: 'Layer 8 — Marketer & Agency Intelligence',
+      modules: `
+        <div class="module-card mc-coral"><div class="mc-top"><div class="mc-icon ic-coral">🎯</div><span class="layer-badge badge-new" style="color:var(--accent4);border-color:rgba(74,244,184,0.3)">Growth</span></div><h4>Ad-Library Teardown</h4><p>Reverse-engineers currently running Meta/TikTok ads in the niche to find the exact angles competitors are spending money on.</p></div>
+        <div class="module-card mc-coral"><div class="mc-top"><div class="mc-icon ic-coral">🎣</div><span class="layer-badge badge-new" style="color:var(--accent4);border-color:rgba(74,244,184,0.3)">Growth</span></div><h4>High-Converting Hooks</h4><p>Generates 10 proven, niche-specific hooks validated against historical YouTube and TikTok performance data.</p></div>
+        <div class="module-card mc-coral"><div class="mc-top"><div class="mc-icon ic-coral">📊</div><span class="layer-badge badge-new" style="color:var(--accent4);border-color:rgba(74,244,184,0.3)">Growth</span></div><h4>Channel ROI Matrix</h4><p>Ranks acquisition channels entirely by historical CAC-to-LTV ratios for comparable offers.</p></div>
+        <div class="module-card mc-coral"><div class="mc-top"><div class="mc-icon ic-coral">🎨</div><span class="layer-badge badge-upgraded" style="color:var(--accent5);border-color:rgba(244,200,74,0.3)">New</span></div><h4>Creative Direction Engine</h4><p>"Top-performing ads in this niche use: UGC format (73%), problem-agitate-solve (81%), faces in thumbnails (2.3x CTR)." Shows exactly what to create.</p></div>
+        <div class="module-card mc-coral"><div class="mc-top"><div class="mc-icon ic-coral">🎯</div><span class="layer-badge badge-upgraded" style="color:var(--accent5);border-color:rgba(244,200,74,0.3)">New</span></div><h4>Funnel Blueprint</h4><p>"TikTok ad → Landing page → Free PDF lead magnet → 7-day email nurture → Trial → Paid. Estimated end-to-end conversion: 2.1%."</p></div>
+      `,
+      sampleTitle: '📄 Example: "D2C Men\'s Skincare Brand" — expand to preview <span class="arrow">▼</span>',
+      sample: `
+        <div class="sample-row"><div class="sample-label">Hook Angle 1</div><div class="sample-val">"Why your 3-step routine is actually ageing you faster." <span style="color:var(--accent)">(High CTR potential)</span></div></div>
+        <div class="sample-row"><div class="sample-label">Top Channel</div><div class="sample-val">TikTok Shop -> Creators with 10k-50k followers. <span style="color:var(--accent)">($14 avg CAC)</span></div></div>
+        <div class="sample-row"><div class="sample-label">Ad Spend Risk</div><div class="sample-val"><span style="color:var(--red)">High Saturation</span> — Top 3 competitors outspending the rest of the market 10:1.</div></div>
+        <div class="sample-row"><div class="sample-label">White Space</div><div class="sample-val">"Rosacea-focused routines for men over 40." Zero targeted ads currently running.</div></div>
+      `
+    },
+    'creator': {
+      title: 'The AI that finds your white-space<br><span>before you write a word</span>',
+      sub: "Find the actual gaps in the creator economy. Validate your newsletter, course, or service with real audience pain points and willingness-to-pay data.",
+      layerName: 'Layer 8 — Creator Intelligence',
+      modules: `
+        <div class="module-card mc-amber"><div class="mc-top"><div class="mc-icon ic-amber">💳</div><span class="layer-badge badge-new" style="color:var(--accent4);border-color:rgba(74,244,184,0.3)">Audience</span></div><h4>Willingness-to-Pay Data</h4><p>Cross-references Gumroad, Substack, and Patreon pricing to determine what your audience actually buys.</p></div>
+        <div class="module-card mc-amber"><div class="mc-top"><div class="mc-icon ic-amber">💧</div><span class="layer-badge badge-new" style="color:var(--accent4);border-color:rgba(74,244,184,0.3)">Audience</span></div><h4>Audience Leakage</h4><p>Find out where major creators in the niche are failing their audiences, giving you the exact wedge to enter the market.</p></div>
+        <div class="module-card mc-amber"><div class="mc-top"><div class="mc-icon ic-amber">⚖️</div><span class="layer-badge badge-new" style="color:var(--accent4);border-color:rgba(74,244,184,0.3)">Audience</span></div><h4>Platform Arbitrage</h4><p>Identifies topics going viral on Twitter/LinkedIn that haven't been turned into deep-dive YouTube videos or courses yet.</p></div>
+        <div class="module-card mc-amber"><div class="mc-top"><div class="mc-icon ic-amber">🎯</div><span class="layer-badge badge-upgraded" style="color:var(--accent5);border-color:rgba(244,200,74,0.3)">New</span></div><h4>First 100 Subscribers Playbook</h4><p>The cold-start problem solved: "Post on 3 subreddits with [template]. Guest on 2 podcasts. Cross-promote with 1 adjacent creator. Timeline: 30 days."</p></div>
+        <div class="module-card mc-amber"><div class="mc-top"><div class="mc-icon ic-amber">💰</div><span class="layer-badge badge-upgraded" style="color:var(--accent5);border-color:rgba(244,200,74,0.3)">New</span></div><h4>Creator Revenue Ladder</h4><p>"Free newsletter (ads=$200/mo) → Paid tier ($9/mo × 200=$1.8k) → Course ($199 × 50=$10k) → Cohort ($997 × 20=$20k)." Your entire monetisation path.</p></div>
+      `,
+      sampleTitle: '📄 Example: "Paid Newsletter for Indie Makers" — expand to preview <span class="arrow">▼</span>',
+      sample: `
+        <div class="sample-row"><div class="sample-label">Willingness to Pay</div><div class="sample-val">$9/mo to $15/mo. <span style="color:var(--accent5)">(High price sensitivity)</span></div></div>
+        <div class="sample-row"><div class="sample-label">Audience Leakage</div><div class="sample-val">"Existing newsletters just curate links. I want actual teardowns of growth strategies."</div></div>
+        <div class="sample-row"><div class="sample-label">Platform Arbitrage</div><div class="sample-val">High engagement on X for "Bootstrapped MRR updates", but zero high-quality YouTube case studies on the topic.</div></div>
+        <div class="sample-row"><div class="sample-label">Viability</div><div class="sample-val"><span style="color:var(--accent2)">Moderate (5/10)</span> — High churn rate in info-product space. Requires strong personal brand moat.</div></div>
+      `
+    },
+    'consultant': {
+      title: 'The AI that builds your client authority<br><span>before you pitch</span>',
+      sub: "Win high-ticket consulting contracts with data they can't ignore. Instantly generate white-label market audits, competitor gap analysis, and 12-month GTM roadmaps.",
+      layerName: 'Layer 8 — Consultant & Advisor Intelligence',
+      modules: `
+        <div class="module-card mc-purple"><div class="mc-top"><div class="mc-icon ic-purple">🏛️</div><span class="layer-badge badge-new" style="color:var(--accent4);border-color:rgba(74,244,184,0.3)">Strategy</span></div><h4>White-Label Audit Builder</h4><p>Generates high-fidelity market audits with your firm's branding, covering TAM, SAM, and competitor landscape for client pitches.</p></div>
+        <div class="module-card mc-purple"><div class="mc-top"><div class="mc-icon ic-purple">🤝</div><span class="layer-badge badge-new" style="color:var(--accent4);border-color:rgba(74,244,184,0.3)">Strategy</span></div><h4>Stakeholder Friction Mapping</h4><p>Identifies the top 3 objections from internal stakeholders (C-level, IT, Finance) for a proposed project migration or launch.</p></div>
+        <div class="module-card mc-purple"><div class="mc-top"><div class="mc-icon ic-purple">💰</div><span class="layer-badge badge-new" style="color:var(--accent4);border-color:rgba(74,244,184,0.3)">Strategy</span></div><h4>12-Month ROI Roadmap</h4><p>Forecasts the financial impact of your consulting advice over 4 quarters, broken down by cost-savings and revenue uplift.</p></div>
+        <div class="module-card mc-purple"><div class="mc-top"><div class="mc-icon ic-purple">📄</div><span class="layer-badge badge-upgraded" style="color:var(--accent5);border-color:rgba(244,200,74,0.3)">New</span></div><h4>Authority Deliverable Generator</h4><p>Data structured as a ready-to-send 5-slide pitch deck. Slide 1: Market opportunity. Slide 2: Their blind spot. Slide 3: Your recommendation. Pre-filled from report.</p></div>
+        <div class="module-card mc-purple"><div class="mc-top"><div class="mc-icon ic-purple">💸</div><span class="layer-badge badge-upgraded" style="color:var(--accent5);border-color:rgba(244,200,74,0.3)">New</span></div><h4>Consulting Rate Optimizer</h4><p>"Hourly ($150-$300 = commodity). Project-based ($5k-$25k = higher perceived value). Retainer ($3k-$8k/mo = recurring). Recommendation for this niche: ___"</p></div>
+      `,
+      sampleTitle: '📄 Example: "GTM Strategy for Mid-Market ERP Migration" — expand to preview <span class="arrow">▼</span>',
+      sample: `
+        <div class="sample-row"><div class="sample-label">Audience Focus</div><div class="sample-val">Manufacturing CEOs (50-200 employees). <span style="color:var(--accent)">($150k+ Contract Value)</span></div></div>
+        <div class="sample-row"><div class="sample-label">Top Friction</div><div class="sample-val">"Finance Dept fears data loss during migration." -> Counter-pitch with 'SafeSync' verification step.</div></div>
+        <div class="sample-row"><div class="sample-label">ROI Est</div><div class="sample-val">$1.2M annual savings via automation. Payback period: 7 months.</div></div>
+        <div class="sample-row"><div class="sample-label">Authority Vector</div><div class="sample-val">Proprietary "Supply-Chain Efficiency Index" report. <span style="color:var(--accent4)">(High conviction)</span></div></div>
+      `
+    },
+    'general': {
+      title: 'The AI that validates your next move<br><span>before you risk a dime</span>',
+      sub: "Whether it's a local service, a side hustle, or a career pivot—get the raw truth. No hype, just clear data on demand, competition, and how to actually win.",
+      layerName: 'Layer 8 — General Market Intelligence',
+      modules: `
+        <div class="module-card mc-green"><div class="mc-top"><div class="mc-icon ic-green">📍</div><span class="layer-badge badge-new" style="color:var(--accent4);border-color:rgba(74,244,184,0.3)">Local</span></div><h4>Local Demand Heatmap</h4><p>Analyzes Google Search and Maps data to find out if your city actually needs another pet grooming shop or coffee roastery.</p></div>
+        <div class="module-card mc-green"><div class="mc-top"><div class="mc-icon ic-green">🛠️</div><span class="layer-badge badge-new" style="color:var(--accent4);border-color:rgba(74,244,184,0.3)">Local</span></div><h4>Micro-Business Viability Score</h4><p>Real hourly-rate after expenses, platform fees, and local taxes. Compares against employed alternatives in your area.</p></div>
+        <div class="module-card mc-green"><div class="mc-top"><div class="mc-icon ic-green">🌉</div><span class="layer-badge badge-new" style="color:var(--accent4);border-color:rgba(74,244,184,0.3)">Local</span></div><h4>Skill-to-Market Bridge</h4><p>Matches your existing resume/skills to the fastest-growing freelance roles in your specific geography.</p></div>
+        <div class="module-card mc-green"><div class="mc-top"><div class="mc-icon ic-green">📝</div><span class="layer-badge badge-upgraded" style="color:var(--accent5);border-color:rgba(244,200,74,0.3)">New</span></div><h4>Launch Requirements Checklist</h4><p>"Dog grooming in Austin TX: Business license ($50), DBA filing, liability insurance ($400/yr), health dept inspection, zoning approval." Everything you need to legally start.</p></div>
+        <div class="module-card mc-green"><div class="mc-top"><div class="mc-icon ic-green">📍</div><span class="layer-badge badge-upgraded" style="color:var(--accent5);border-color:rgba(244,200,74,0.3)">New</span></div><h4>Hyper-Local Competition Density</h4><p>Not just ZIP-level: "3 groomers within 1 mile. But zero within 2 miles of the new housing development in [area]." Finds the gap on the map.</p></div>
+      `,
+      sampleTitle: '📄 Example: "Dog Grooming Service in Austin, TX" — expand to preview <span class="arrow">▼</span>',
+      sample: `
+        <div class="sample-row"><div class="sample-label">Local Demand</div><div class="sample-val"><span style="color:var(--accent5)">High (8/10)</span> — Austin "Dog Concierge" searches up 42% YoY.</div></div>
+        <div class="sample-row"><div class="sample-label">Competition</div><div class="sample-val">37 shops in ZIP 78704. <span style="color:var(--red)">Oversaturated.</span></div></div>
+        <div class="sample-row"><div class="sample-label">White Space</div><div class="sample-val">"Late-night/Weekend emergency grooming." Zero provider matches found.</div></div>
+        <div class="sample-row"><div class="sample-label">Est. Wage</div><div class="sample-val">$65 - $110 / hr (Net after supplies). <span style="color:var(--accent)">✅ Viable side-hustle</span></div></div>
+      `
+    }
+  };
+
+  // SIMULATOR DATA (SEQUENTIAL)
+  const simulationData = {
+    'dev': {
+      phase1: [
+        { t: '00:01', msg: 'Agent 1: Scanning GitHub for "API aggregators"...', color: '' },
+        { t: '00:02', msg: 'Agent 2: Found 12 open-source alternatives. Saturation rising.', color: 'amber', survival: 85 },
+        { t: '00:04', msg: 'Agent 3: Disruption Check: OpenAI "Browser" tool overlaps 80% logic.', color: 'red', survival: 42 },
+        { t: '00:05', msg: 'Agent 4: Barrier found: Enterprise SOC2 compliance requires 6+ months.', color: 'red', survival: 18 },
+        { t: '00:06', msg: 'CRUCIBLE RESULT: Idea killed. Pivot to "Compliance-First Middleware" detected.', color: 'green', status: 'PIVOT' }
+      ],
+      phase2: [
+        { name: 'OpenAI Browser', x: 20, y: 30, threat: 'high' },
+        { name: 'Zillow API', x: -40, y: 50, threat: 'med' },
+        { name: 'RealtyMole', x: 60, y: -20, threat: 'low' },
+        { name: 'Indie Scraper', x: -10, y: -60, threat: 'med' }
+      ],
+      phase3: [0, 10, 50, 90, 85, 95] // Stress points
+    },
+    'marketer': {
+      phase1: [
+        { t: '00:01', msg: 'Agent 1: Crawling Meta Ad Library for "mens skincare"...', color: '' },
+        { t: '00:02', msg: 'Agent 2: Top 3 competitors spending $50k+/day. High barrier.', color: 'amber', survival: 70 },
+        { t: '00:04', msg: 'Agent 3: Audience Search: "Rosacea treatment for men" is underserved.', color: 'green', survival: 88 },
+        { t: '00:05', msg: 'Agent 4: Calculating CAC... Estimated $14 vs industry avg $45.', color: 'green', survival: 94 },
+        { t: '00:06', msg: 'CRUCIBLE RESULT: High survivability. Niche wedge identified.', color: 'green', status: 'VIABLE' }
+      ],
+      phase2: [
+        { name: 'Hims', x: 80, y: 10, threat: 'high' },
+        { name: 'Lumin', x: -30, y: 40, threat: 'high' },
+        { name: 'Tiege Hanley', x: 40, y: -50, threat: 'med' },
+        { name: 'Geologie', x: -60, y: -20, threat: 'low' }
+      ],
+      phase3: [0, 20, 15, 30, 25, 40]
+    },
+    'creator': {
+      phase1: [
+        { t: '00:01', msg: 'Agent 1: Analyzing Substack/Gumroad price sensitivity...', color: '' },
+        { t: '00:02', msg: 'Agent 2: Willingness-to-pay capped at $15/mo. Low margin.', color: 'amber', survival: 60 },
+        { t: '00:04', msg: 'Agent 3: Skill-Bridge Audit: High demand for "Indie growth teardowns".', color: 'green', survival: 75 },
+        { t: '00:05', msg: 'Agent 4: Platform Risk: Substack algorithm change could cut reach 40%.', color: 'red', survival: 45 },
+        { t: '00:06', msg: 'CRUCIBLE RESULT: Moderate risk. Build personal moat first.', color: 'amber', status: 'CAUTION' }
+      ],
+      phase2: [
+        { name: 'Lenny Newsletter', x: 90, y: 20, threat: 'high' },
+        { name: 'Hypefury', x: -40, y: -30, threat: 'med' },
+        { name: 'Gumroad Incumbents', x: 20, y: 60, threat: 'high' },
+        { name: 'TinySeed Portfolios', x: -70, y: 10, threat: 'low' }
+      ],
+      phase3: [0, 30, 60, 45, 70, 65]
+    },
+    'consultant': {
+      phase1: [
+        { t: '00:01', msg: 'Agent 1: Mapping C-suite objections for "ERP migration"...', color: '' },
+        { t: '00:02', msg: 'Agent 2: Finance Dept friction identified: Data loss fear.', color: 'amber', survival: 80 },
+        { t: '00:04', msg: 'Agent 3: ROI Forecast: 7-month payback period calculated.', color: 'green', survival: 92 },
+        { t: '00:05', msg: 'Agent 4: White-Label Opp: High value in "Supply Chain Efficiency Index".', color: 'green', survival: 96 },
+        { t: '00:06', msg: 'CRUCIBLE RESULT: Strong authority potential. Pitch ready.', color: 'green', status: 'HIGH VALUE' }
+      ],
+      phase2: [
+        { name: 'McKinsey (Mid-Market)', x: 85, y: -10, threat: 'high' },
+        { name: 'Accenture', x: 20, y: 70, threat: 'med' },
+        { name: 'Deloitte Digital', x: -50, y: 30, threat: 'med' },
+        { name: 'SaaS In-house teams', x: -10, y: -60, threat: 'high' }
+      ],
+      phase3: [0, 5, 10, 15, 10, 20]
+    },
+    'general': {
+      phase1: [
+        { t: '00:01', msg: 'Agent 1: Scanning Austin, TX for "Dog Grooming" heatmaps...', color: '' },
+        { t: '00:02', msg: 'Agent 2: 37 shops in ZIP 78704. Market oversaturated.', color: 'red', survival: 30 },
+        { t: '00:04', msg: 'Agent 3: Gap found: "Late-night emergency grooming" has 0 results.', color: 'green', survival: 65 },
+        { t: '00:05', msg: 'Agent 4: Viability Check: $65-$110/hr net revenue projected.', color: 'green', survival: 78 },
+        { t: '00:06', msg: 'CRUCIBLE RESULT: Viable side-hustle with specific wedge.', color: 'green', status: 'VALID' }
+      ],
+      phase2: [
+        { name: 'PetSmart', x: 70, y: 60, threat: 'high' },
+        { name: 'Local Groomer v1', x: -40, y: 10, threat: 'med' },
+        { name: 'Local Groomer v2', x: 20, y: -30, threat: 'med' },
+        { name: 'Mobile Van X', x: -20, y: 50, threat: 'low' }
+      ],
+      phase3: [0, 40, 35, 60, 55, 75]
+    }
+  };
+
+  let simulatorTimeout = null;
+
+  function runSimulation(p) {
+    if(simulatorTimeout) clearTimeout(simulatorTimeout);
+    const data = simulationData[p];
+    if (!data) return;
+
+    // Elements
+    const log = document.getElementById('gauntlet-log');
+    const status = document.getElementById('gauntlet-status');
+    const fill = document.getElementById('survival-fill');
+    const val = document.getElementById('survival-val');
+    const phaseName = document.getElementById('crucible-phase-name');
+    
+    // Reset state
+    log.innerHTML = '';
+    fill.style.transform = 'scaleX(1)';
+    val.textContent = '100%';
+    status.textContent = 'SCANNING...';
+    status.className = 'nav-badge';
+    status.style.borderColor = 'rgba(255,255,255,0.1)';
+    status.style.color = 'var(--muted2)';
+    
+    document.querySelectorAll('.phase-container').forEach(c => c.classList.remove('active'));
+    document.getElementById('phase-1').classList.add('active');
+    phaseName.textContent = 'Phase 1: Adversarial Gauntlet';
+
+    // --- PHASE 1: GAUNTLET ---
+    let i = 0;
+    function runPhase1() {
+      if(i >= data.phase1.length) {
+        setTimeout(runPhase2, 1000);
+        return;
+      }
+      const ev = data.phase1[i];
+      const line = document.createElement('div');
+      line.className = 'log-line';
+      line.innerHTML = `<span class="log-time">${ev.t}</span> <span class="log-msg ${ev.color}">${ev.msg}</span>`;
+      log.appendChild(line);
+      setTimeout(() => line.classList.add('visible'), 50);
+      
+      if(ev.survival !== undefined) {
+        fill.style.transform = `scaleX(${ev.survival/100})`;
+        val.textContent = ev.survival + '%';
+      }
+      if(ev.status) status.textContent = ev.status;
+      
+      i++;
+      simulatorTimeout = setTimeout(runPhase1, 1800);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    // --- PHASE 2: SONAR ---
+    function runPhase2() {
+      document.getElementById('phase-1').classList.remove('active');
+      document.getElementById('phase-2').classList.add('active');
+      phaseName.textContent = 'Phase 2: Predator Sonar';
+      status.textContent = 'ACQUIRING TARGETS...';
+      
+      const field = document.getElementById('predator-field');
+      field.innerHTML = '';
+      
+      data.phase2.forEach((p, idx) => {
+        setTimeout(() => {
+          const blip = document.createElement('div');
+          blip.className = 'predator-blip detected';
+          blip.style.left = `calc(50% + ${p.x}px)`;
+          blip.style.top = `calc(50% + ${p.y}px)`;
+          if(p.threat === 'high') blip.style.background = 'var(--red)';
+          
+          const label = document.createElement('div');
+          label.className = 'predator-label';
+          label.style.left = `calc(50% + ${p.x + 8}px)`;
+          label.style.top = `calc(50% + ${p.y - 4}px)`;
+          label.textContent = p.name;
+          
+          field.appendChild(blip);
+          field.appendChild(label);
+          
+          if(idx === data.phase2.length - 1) {
+            setTimeout(runPhase3, 3000);
+          }
+        }, idx * 1200);
+      });
+    }
+
+    // --- PHASE 3: STRESS TRAJECTORY ---
+    function runPhase3() {
+      document.getElementById('phase-2').classList.remove('active');
+      document.getElementById('phase-3').classList.add('active');
+      phaseName.textContent = 'Phase 3: Unit-Econ Stress Test';
+      status.textContent = 'SIMULATING LOAD...';
+      
+      const pathEl = document.getElementById('stress-path');
+      const dot = document.getElementById('stress-dot');
+      const level = document.getElementById('stress-level');
+      const points = data.phase3;
+      
+      let step = 0;
+      function animateStress() {
+        if(step >= points.length) {
+          status.textContent = 'FINAL REPORT READY';
+          status.style.color = 'var(--accent4)';
+          status.style.borderColor = 'var(--accent4)';
+          
+          // Infinite loop - go back to phase 1
+          setTimeout(() => runSimulation(p), 4000);
+          return;
+        }
+        
+        const x = (step / (points.length - 1)) * 100;
+        const y = 100 - points[step];
+        const prevPath = pathEl.getAttribute('d');
+        const newSegment = (step === 0 ? 'M' : 'L') + ` ${x}% ${y}%`;
+        pathEl.setAttribute('d', (prevPath || '') + newSegment);
+        
+        dot.style.left = `${x}%`;
+        dot.style.top = `${y}%`;
+        
+        if(points[step] > 80) { level.textContent = 'CRITICAL'; level.style.color = 'var(--red)'; }
+        else if(points[step] > 40) { level.textContent = 'STRESSED'; level.style.color = 'var(--accent5)'; }
+        else { level.textContent = 'STABLE'; level.style.color = 'var(--accent4)'; }
+        
+        step++;
+        simulatorTimeout = setTimeout(animateStress, 1200);
+      }
+      pathEl.setAttribute('d', ''); // Clear path
+      animateStress();
+    }
+
+    runPhase1();
+  }
+
+  function switchPersona(p, btn) {
+    document.querySelectorAll('.p-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    
+    const data = personaData[p];
+    if (!data) return;
+    
+    // Trigger Simulation
+    runSimulation(p);
+    
+    // Hero Update
+    const title = document.getElementById('hero-title');
+    const sub = document.getElementById('hero-sub');
+    if (title && sub) {
+      title.style.opacity = '0'; sub.style.opacity = '0';
+      title.style.transform = 'translateY(10px)'; sub.style.transform = 'translateY(10px)';
+      setTimeout(() => {
+        title.innerHTML = data.title;
+        sub.innerHTML = data.sub;
+        title.style.opacity = '1'; sub.style.opacity = '1';
+        title.style.transform = 'translateY(0)'; sub.style.transform = 'translateY(0)';
+      }, 300);
+    }
+
+    // Layer 8 update
+    const grid = document.getElementById('persona-grid');
+    if (grid) {
+      grid.style.opacity = '0';
+      grid.style.transform = 'translateY(10px)';
+      setTimeout(() => {
+        const label = document.querySelector('#persona-sep .section-sep-label');
+        if (label) label.textContent = data.layerName;
+        grid.innerHTML = data.modules;
+        grid.style.opacity = '1';
+        grid.style.transform = 'translateY(0)';
+      }, 300);
+    }
+
+    // Sample Report update
+    const sampleBody = document.querySelector('#sample-body .sample-content');
+    const sampleToggle = document.querySelector('.sample-toggle');
+    if (sampleBody && sampleToggle) {
+      sampleBody.style.opacity = '0';
+      setTimeout(() => {
+        sampleToggle.innerHTML = data.sampleTitle;
+        sampleBody.innerHTML = data.sample;
+        sampleBody.style.opacity = '1';
+      }, 300);
+    }
+  }
+
+  // Initial Run
+  window.onload = () => {
+    runSimulation('dev');
+  };
+
+</script>
+</body>
+</html>
