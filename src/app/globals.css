@@ -1,0 +1,43 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap');
+
+@theme {
+  --color-bg: #0D0D0E;
+  --color-surface: #141416;
+  --color-surface-2: #1C1C20;
+  --color-surface-3: #222228;
+  --color-border: rgba(255,255,255,0.07);
+  --color-border-accent: rgba(255,255,255,0.14);
+  --color-text: #F0EFE8;
+  --color-muted: #6E6D78;
+  --color-muted-2: #9A99A6;
+  
+  --color-accent: #C8F264;
+  --color-accent-2: #7C6FFF;
+  --color-accent-3: #FF6B4A;
+  --color-accent-4: #4AF4B8;
+  --color-accent-5: #F4C84A;
+  --color-brand-red: #FF4A6B;
+
+  --font-mono: 'DM Mono', monospace;
+  --font-serif: 'Instrument Serif', serif;
+  --font-sans: 'DM Sans', sans-serif;
+
+  --radius-DEFAULT: 12px;
+  --radius-lg: 20px;
+}
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+}
