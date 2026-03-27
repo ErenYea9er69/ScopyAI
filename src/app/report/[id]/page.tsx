@@ -10,6 +10,7 @@ import { DebateCard } from '@/components/report/DebateCard';
 import { PivotSection } from '@/components/report/PivotSection';
 import { RiskRadarLive } from '@/components/report/RiskRadarLive';
 import { SourceBibliography } from '@/components/report/SourceBibliography';
+import { ReportChat } from '@/components/report/ReportChat';
 import type { FullReport } from '@/types/report';
 import { cn } from '@/lib/utils';
 
@@ -141,6 +142,11 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
           </>
         )}
       </div>
+
+      {/* Floating Chat Widget — only for authenticated viewers */}
+      {report && !isShared && status === 'complete' && (
+        <ReportChat reportId={id} />
+      )}
     </>
   );
 }
