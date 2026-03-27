@@ -72,12 +72,13 @@ export function ReportHeader({ report, isShared = false }: ReportHeaderProps) {
               JSON
             </a>
 
-            <button 
-              onClick={() => window.print()}
+            <a
+              href={`/api/report/${report.id}/pdf`}
+              download
               className="text-[12px] font-medium py-2 px-5 rounded-lg border border-accent bg-accent text-bg hover:shadow-[0_4px_16px_rgba(200,242,100,0.2)] transition-shadow"
             >
               Export PDF
-            </button>
+            </a>
           </div>
         )}
 
