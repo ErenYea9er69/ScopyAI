@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateStructuredOutput, MODELS } from '@/lib/ai/client';
 import { gatherIntelligence } from '@/lib/research/orchestrator';
+import { userStore } from '@/lib/store';
 import { z } from 'zod';
 
 const duelInputSchema = z.object({
@@ -61,8 +62,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Credit Check (Mock phase 5) - Duel costs 2 credits
+    const user = userStore.get('default_user');
+    if (!user || user.credits < 2) {
+      return NextResponse.json(
+        { error: 'Insufficient credits. Niche duels cost 2 credits.' },
+        { status: 402 } 
+      );
+    }
+
     const { niches, geography } = parsed.data;
     const duelId = `duel_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    
+    // Deduct 2 credits
+    userStore.set('default_user', { ...user, credits: user.credits - 2 });
 
     // Store initial status
     duelStore.set(duelId, { status: 'researching' });

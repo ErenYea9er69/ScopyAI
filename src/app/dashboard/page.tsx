@@ -14,9 +14,15 @@ type ReportSummary = {
   compositeScore?: number;
 };
 
+type UserData = {
+  id: string;
+  credits: number;
+  plan: string;
+};
+
 export default function DashboardPage() {
   const [reports, setReports] = useState<ReportSummary[]>([]);
-  const credits = 1; // Placeholder — wired to Supabase later
+  const [user, setUser] = useState<UserData | null>(null);
 
   useEffect(() => {
     const loadReports = async () => {
@@ -31,10 +37,28 @@ export default function DashboardPage() {
       }
     };
     
+    const loadUser = async () => {
+      try {
+        const res = await fetch('/api/me');
+        if (res.ok) setUser(await res.json());
+      } catch (err) {}
+    };
+
+    loadUser();
     loadReports();
     const interval = setInterval(loadReports, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  const refillCredits = async () => {
+    try {
+      const res = await fetch('/api/me', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        setUser(prev => prev ? { ...prev, credits: data.credits } : null);
+      }
+    } catch (err) {}
+  };
 
   const statusBadge = (status: string) => {
     const map: Record<string, { bg: string; text: string }> = {
@@ -66,10 +90,19 @@ export default function DashboardPage() {
             <p className="text-[13px] text-muted mt-1">Your market intelligence reports</p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="font-mono text-[11px] text-muted border border-border py-1.5 px-3 rounded-lg flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-accent-4" />
-              {credits} report{credits !== 1 ? 's' : ''} remaining
-            </div>
+            {user && (
+              <div className="font-mono text-[11px] text-muted border border-border bg-surface py-1.5 px-3 rounded-lg flex items-center gap-2 relative group">
+                <span className={cn("w-1.5 h-1.5 rounded-full", user.credits > 0 ? "bg-accent" : "bg-brand-red")} />
+                <span className={user.credits === 0 ? "text-brand-red" : ""}>{user.credits} Credits ({user.plan})</span>
+                <button 
+                  onClick={refillCredits} 
+                  className="ml-2 text-[10px] text-accent/50 hover:text-accent opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Dev Only: Refill Credits"
+                >
+                  +10 🛠️
+                </button>
+              </div>
+            )}
             <Link
               href="/#intake"
               className="text-[13px] font-medium py-2 px-5 rounded-lg border border-accent bg-accent text-bg hover:shadow-[0_4px_16px_rgba(200,242,100,0.2)] transition-shadow"

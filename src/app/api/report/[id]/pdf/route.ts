@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { renderToBuffer } from '@react-pdf/renderer';
-import { reportStore } from '@/lib/store';
+import { reportStore, userStore } from '@/lib/store';
 import { ReportPDF } from '@/lib/pdf/ReportPDF';
 import React from 'react';
 
@@ -29,8 +29,11 @@ export async function GET(
     );
   }
 
+  const user = userStore.get('default_user');
+  const settings = user?.plan === 'Agency' ? user.settings : undefined;
+
   try {
-    const pdfElement = React.createElement(ReportPDF, { report }) as any;
+    const pdfElement = React.createElement(ReportPDF, { report, settings }) as any;
     const buffer = await renderToBuffer(pdfElement);
     const uint8 = new Uint8Array(buffer);
 

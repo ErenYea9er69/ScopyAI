@@ -26,7 +26,7 @@ Font.register({
   ],
 });
 
-// -- Styles --
+// -- Styles Base --
 const c = {
   bg: '#0D0F11',
   surface: '#13161A',
@@ -34,12 +34,13 @@ const c = {
   border: '#23282F',
   text: '#E8E8EB',
   muted: '#6B7280',
-  accent: '#C8F264',
+  accent: '#C8F264', // Default
   red: '#FF4D6A',
   blue: '#64AAFF',
 };
 
-const s = StyleSheet.create({
+// Dynamic style generator based on brand settings
+const createStyles = (brandColor: string = c.accent) => StyleSheet.create({
   page: {
     backgroundColor: c.bg,
     color: c.text,
@@ -62,8 +63,8 @@ const s = StyleSheet.create({
   },
   coverBadge: {
     fontSize: 9,
-    color: c.accent,
-    backgroundColor: '#1A2E0E',
+    color: brandColor,
+    backgroundColor: '#1A2E0E', // Keeping this subtle green-black as it looks good universally
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -109,7 +110,7 @@ const s = StyleSheet.create({
   coverMetaValue: {
     fontSize: 14,
     fontWeight: 700,
-    color: c.accent,
+    color: brandColor,
   },
   // -- Section --
   sectionHeader: {
@@ -218,7 +219,7 @@ const s = StyleSheet.create({
     padding: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: c.accent,
+    borderColor: brandColor,
     borderLeftWidth: 3,
   },
   // -- Source --
@@ -242,17 +243,17 @@ const s = StyleSheet.create({
 
 // -- Helpers --
 
-function ConfBadge({ level }: { level: string }) {
+function ConfBadge({ level, s }: { level: string, s: any }) {
   const style =
     level === 'high' ? s.confHigh :
     level === 'medium' ? s.confMedium : s.confLow;
   return <Text style={[s.confidenceBadge, style]}>{level.toUpperCase()}</Text>;
 }
 
-function PageFooter({ reportId }: { reportId: string }) {
+function PageFooter({ reportId, companyName, s }: { reportId: string, companyName: string, s: any }) {
   return (
     <View style={s.footer} fixed>
-      <Text>ScopyAI Intelligence Report</Text>
+      <Text>{companyName} Intelligence Report</Text>
       <Text>{reportId}</Text>
       <Text render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
     </View>
@@ -261,7 +262,7 @@ function PageFooter({ reportId }: { reportId: string }) {
 
 // -- Layer renderers --
 
-function renderGenericLayer(data: any): React.ReactNode {
+function renderGenericLayer(data: any, s: any): React.ReactNode {
   if (!data) return null;
   const nodes: React.ReactNode[] = [];
 
@@ -342,16 +343,28 @@ const LAYERS = [
 
 // ===== MAIN DOCUMENT =====
 
-export function ReportPDF({ report }: { report: FullReport }) {
+type PDFProps = {
+  report: FullReport;
+  settings?: {
+    companyName?: string;
+    brandColor?: string;
+  };
+};
+
+export function ReportPDF({ report, settings }: PDFProps) {
+  const brandColor = settings?.brandColor || c.accent;
+  const companyName = settings?.companyName || 'ScopyAI';
+  const s = createStyles(brandColor);
+
   return (
     <Document
-      title={`ScopyAI Report: ${report.niche}`}
-      author="ScopyAI Intelligence Engine"
+      title={`${companyName} Report: ${report.niche}`}
+      author={`${companyName} Intelligence Engine`}
       subject={`Market intelligence report for ${report.niche}`}
     >
       {/* === COVER PAGE === */}
       <Page size="A4" style={s.coverPage}>
-        <Text style={s.coverBadge}>ScopyAI Intelligence Report</Text>
+        <Text style={s.coverBadge}>{companyName} Intelligence Report</Text>
         <Text style={s.coverTitle}>{report.niche}</Text>
         <Text style={s.coverSubtitle}>
           Deep market intelligence generated for the {report.persona} archetype.
@@ -379,7 +392,7 @@ export function ReportPDF({ report }: { report: FullReport }) {
             </Text>
           </View>
         </View>
-        <PageFooter reportId={report.id} />
+        <PageFooter reportId={report.id} companyName={companyName} s={s} />
       </Page>
 
       {/* === EXECUTIVE SUMMARY === */}
@@ -431,14 +444,14 @@ export function ReportPDF({ report }: { report: FullReport }) {
             </View>
           </View>
 
-          <View style={[s.card, { borderColor: c.accent, borderWidth: 1.5 }]}>
-            <Text style={[s.cardTitle, { color: c.accent }]}>Composite Score</Text>
-            <Text style={[s.debateScore, { color: c.accent }]}>
+          <View style={[s.card, { borderColor: brandColor, borderWidth: 1.5 }]}>
+            <Text style={[s.cardTitle, { color: brandColor }]}>Composite Score</Text>
+            <Text style={[s.debateScore, { color: brandColor }]}>
               {report.debate.compositeScore}/100
             </Text>
           </View>
 
-          <PageFooter reportId={report.id} />
+          <PageFooter reportId={report.id} companyName={companyName} s={s} />
         </Page>
       )}
 
@@ -454,7 +467,7 @@ export function ReportPDF({ report }: { report: FullReport }) {
               <Text style={s.sectionTitle}>{layer.title}</Text>
             </View>
 
-            {renderGenericLayer(data)}
+            {renderGenericLayer(data, s)}
 
             {/* Not Found section */}
             {(data as any)?.notFound?.length > 0 && (
@@ -470,7 +483,7 @@ export function ReportPDF({ report }: { report: FullReport }) {
               </View>
             )}
 
-            <PageFooter reportId={report.id} />
+            <PageFooter reportId={report.id} companyName={companyName} s={s} />
           </Page>
         );
       })}
@@ -490,12 +503,12 @@ export function ReportPDF({ report }: { report: FullReport }) {
 
           {report.autoPivot.pivots.map((pivot, i) => (
             <View key={i} style={s.pivotCard}>
-              <Text style={[s.cardTitle, { color: c.accent }]}>
+              <Text style={[s.cardTitle, { color: brandColor }]}>
                 {pivot.rank}: {pivot.title}
               </Text>
               <Text style={s.cardBody}>{pivot.description}</Text>
               <View style={{ flexDirection: 'row', gap: 16, marginTop: 8 }}>
-                <Text style={{ fontSize: 8, color: c.accent }}>
+                <Text style={{ fontSize: 8, color: brandColor }}>
                   New Saturation: {pivot.newSaturation}%
                 </Text>
                 <Text style={{ fontSize: 8, color: c.blue }}>
@@ -506,7 +519,7 @@ export function ReportPDF({ report }: { report: FullReport }) {
             </View>
           ))}
 
-          <PageFooter reportId={report.id} />
+          <PageFooter reportId={report.id} companyName={companyName} s={s} />
         </Page>
       )}
 
@@ -538,7 +551,7 @@ export function ReportPDF({ report }: { report: FullReport }) {
           </View>
         ))}
 
-        <PageFooter reportId={report.id} />
+        <PageFooter reportId={report.id} companyName={companyName} s={s} />
       </Page>
     </Document>
   );

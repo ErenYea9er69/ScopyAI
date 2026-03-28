@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 
 export function IntakeWizard() {
   const [step, setStep] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   
   // Basic form state
@@ -45,6 +46,7 @@ export function IntakeWizard() {
 
     try {
       setIsGenerating(true);
+      setError(null);
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -61,13 +63,19 @@ export function IntakeWizard() {
         }),
       });
 
-      if (!res.ok) throw new Error('Failed to start generation');
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (res.status === 402) {
+          throw new Error('You have completely run out of credits. Please upgrade your plan or refill credits in the dashboard to generate more reports.');
+        }
+        throw new Error(data.error || 'Failed to start generation');
+      }
       
-      const { reportId } = await res.json();
-      router.push(`/report/${reportId}`);
-    } catch (err) {
+      router.push(`/report/${data.reportId}`);
+    } catch (err: any) {
       console.error(err);
-      alert('Failed to start generation. Please try again.');
+      setError(err.message || 'Failed to start generation. Please try again.');
     } finally {
       setIsGenerating(false);
     }
@@ -204,6 +212,16 @@ export function IntakeWizard() {
             </div>
           )}
         </div>
+
+        {/* Error Display */}
+        {error && step === 2 && (
+          <div className="mx-6 mb-4 p-4 rounded-xl bg-brand-red/10 border border-brand-red/20 flex flex-col items-center justify-center text-center animate-in fade-in slide-in-from-top-2">
+            <span className="text-[24px] mb-2">💳</span>
+            <p className="text-[13px] text-brand-red font-medium leading-relaxed max-w-[400px]">
+              {error}
+            </p>
+          </div>
+        )}
 
         {/* Wizard Nav */}
         <div className="flex justify-between p-4 px-6 border-t border-border">

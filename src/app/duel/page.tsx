@@ -11,6 +11,7 @@ export default function NicheDuelPage() {
   const [duelId, setDuelId] = useState<string | null>(null);
   const [status, setStatus] = useState<'idle' | 'researching' | 'comparing' | 'complete' | 'failed'>('idle');
   const [result, setResult] = useState<DuelResult | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const addNiche = () => {
     if (niches.length < 3) setNiches([...niches, '']);
@@ -34,6 +35,7 @@ export default function NicheDuelPage() {
 
     setStatus('researching');
     setResult(null);
+    setErrorMsg(null);
 
     try {
       const res = await fetch('/api/duel', {
@@ -42,13 +44,20 @@ export default function NicheDuelPage() {
         body: JSON.stringify({ niches: validNiches, geography }),
       });
 
-      if (!res.ok) throw new Error('Failed to start duel');
-
       const data = await res.json();
+
+      if (!res.ok) {
+        if (res.status === 402) {
+          throw new Error('You have mathematically run out of credits. Duels cost 2 credits. Please refill in your dashboard.');
+        }
+        throw new Error(data.error || 'Failed to start duel');
+      }
+
       setDuelId(data.duelId);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setStatus('failed');
+      setStatus('idle');
+      setErrorMsg(err.message || 'An unexpected error occurred.');
     }
   };
 
@@ -149,10 +158,20 @@ export default function NicheDuelPage() {
             <button
               onClick={startDuel}
               disabled={niches.filter(n => n.length > 3).length < 2 || !geography.trim()}
-              className="w-full py-3.5 rounded-xl bg-accent text-bg font-medium text-[14px] hover:shadow-[0_4px_20px_rgba(200,242,100,0.25)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3.5 rounded-xl bg-accent text-bg font-medium text-[14px] hover:shadow-[0_4px_20px_rgba(200,242,100,0.25)] transition-all disabled:opacity-50 disabled:cursor-not-allowed mb-4"
             >
               FIGHT! (Start Duel)
             </button>
+
+            {/* Error Message */}
+            {errorMsg && (
+              <div className="p-4 rounded-xl bg-brand-red/10 border border-brand-red/20 flex flex-col items-center justify-center text-center animate-in fade-in slide-in-from-top-2">
+                <span className="text-[24px] mb-2">💳</span>
+                <p className="text-[13px] text-brand-red font-medium leading-relaxed max-w-[400px]">
+                  {errorMsg}
+                </p>
+              </div>
+            )}
           </div>
         )}
 

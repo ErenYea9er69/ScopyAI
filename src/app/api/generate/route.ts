@@ -10,13 +10,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { intakeSchema } from '@/types/intake';
 import { generateReport } from '@/lib/ai/generator';
-import { reportStore, progressStore } from '@/lib/store';
+import { reportStore, progressStore, userStore } from '@/lib/store';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // Validate intake with Zod
+    // Validations
     const parsed = intakeSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -25,17 +25,29 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Simple in-memory rate limiting (IP-based for now, swap for auth-based later)
+    // Credit Check (Mock phase 5)
+    const user = userStore.get('default_user');
+    if (!user || user.credits < 1) {
+      return NextResponse.json(
+        { error: 'Insufficient credits. Please upgrade your plan.' },
+        { status: 402 } 
+      );
+    }
+
+    // Rate limiting
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
     const now = Date.now();
     const lastGeneration = rateLimitMap.get(ip) || 0;
     if (now - lastGeneration < 60_000) {
       return NextResponse.json(
         { error: 'Rate limited. Please wait 1 minute between generations.' },
-        { status: 429 }
+        { status: 429 } 
       );
     }
     rateLimitMap.set(ip, now);
+
+    // Deduct credit
+    userStore.set('default_user', { ...user, credits: user.credits - 1 });
 
     // Create report ID
     const reportId = `rpt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
