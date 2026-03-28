@@ -3,17 +3,45 @@ import { Hero } from "@/components/landing/Hero";
 import { SocialProof } from "@/components/landing/SocialProof";
 import { Shield } from "@/components/landing/Shield";
 import { IntakeWizard } from "@/components/intake/IntakeWizard";
-import { ModuleGrids } from "@/components/landing/ModuleGrids";
-import { RiskRadar } from "@/components/landing/RiskRadar";
-import { ScorecardPreview } from "@/components/landing/ScorecardPreview";
-import { AutoPivotPreview } from "@/components/landing/AutoPivotPreview";
-import { MoatGrid } from "@/components/landing/MoatGrid";
 import { Footer } from "@/components/landing/Footer";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+
+// Dynamic imports for heavy below-fold sections (code-split for faster initial load)
+const ModuleGrids = dynamic(() => import("@/components/landing/ModuleGrids").then(m => ({ default: m.ModuleGrids })), { ssr: true });
+const RiskRadar = dynamic(() => import("@/components/landing/RiskRadar").then(m => ({ default: m.RiskRadar })), { ssr: true });
+const ScorecardPreview = dynamic(() => import("@/components/landing/ScorecardPreview").then(m => ({ default: m.ScorecardPreview })), { ssr: true });
+const AutoPivotPreview = dynamic(() => import("@/components/landing/AutoPivotPreview").then(m => ({ default: m.AutoPivotPreview })), { ssr: true });
+const MoatGrid = dynamic(() => import("@/components/landing/MoatGrid").then(m => ({ default: m.MoatGrid })), { ssr: true });
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "ScopyAI",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Web",
+  "description": "AI-powered market intelligence engine. Enter a niche and get a complete, sourced, confidence-scored intelligence report in 4 minutes.",
+  "url": "https://scopyai.com",
+  "offers": [
+    { "@type": "Offer", "name": "Explorer", "price": "0", "priceCurrency": "USD", "description": "1 free market report" },
+    { "@type": "Offer", "name": "Pro", "price": "29.00", "priceCurrency": "USD", "description": "Unlimited reports, exports, and Niche Duel" },
+    { "@type": "Offer", "name": "Agency", "price": "99.00", "priceCurrency": "USD", "description": "White-label PDFs, API access, client workspaces" },
+  ],
+  "featureList": [
+    "Live web research with Tavily Deep Search",
+    "8-layer market intelligence analysis",
+    "Confidence-scored competitive intelligence",
+    "Auto-pivot niche suggestions",
+    "PDF, Markdown, and JSON export",
+    "Niche Duel head-to-head comparison",
+    "AI Report Chat for follow-up questions"
+  ],
+};
 
 export default function LandingPage() {
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <Navbar />
       <div className="max-w-[1180px] mx-auto px-7">
         <Hero />

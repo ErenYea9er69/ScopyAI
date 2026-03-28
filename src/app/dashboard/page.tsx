@@ -104,6 +104,13 @@ export default function DashboardPage() {
               </div>
             )}
             <Link
+              href="/dashboard/settings"
+              className="w-9 h-9 rounded-lg border border-border flex items-center justify-center text-muted hover:text-text hover:bg-surface-2 transition-colors"
+              title="Settings"
+            >
+              ⚙️
+            </Link>
+            <Link
               href="/#intake"
               className="text-[13px] font-medium py-2 px-5 rounded-lg border border-accent bg-accent text-bg hover:shadow-[0_4px_16px_rgba(200,242,100,0.2)] transition-shadow"
             >

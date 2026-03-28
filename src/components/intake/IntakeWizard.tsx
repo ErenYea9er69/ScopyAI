@@ -14,7 +14,8 @@ export function IntakeWizard() {
     niche: '', geo: '', stage: '', keywords: '',
     budget: '', time: '', timeline: '', assets: [] as string[],
     urls: '', sources: [] as string[],
-    fit: [] as string[]
+    fit: [] as string[],
+    _hp: '' // Honeypot field — bots fill this, humans never see it
   });
 
   // Calculate confidence score (simple mock logic)
@@ -41,6 +42,12 @@ export function IntakeWizard() {
   const handleNext = async () => {
     if (step < 2) {
       setStep(step + 1);
+      return;
+    }
+
+    // Honeypot check — silently reject bots
+    if (form._hp) {
+      console.warn('[IntakeWizard] Bot detected via honeypot.');
       return;
     }
 
@@ -112,6 +119,12 @@ export function IntakeWizard() {
             <div className={cn("w-[22px] h-[22px] rounded-full border-[1.5px] flex items-center justify-center font-mono text-[10px] shrink-0 transition-all", step === 2 ? "border-accent text-accent" : "border-muted text-muted")}>3</div>
             <span className="text-[12px]">Competitors</span>
           </div>
+        </div>
+
+        {/* Honeypot — visually hidden, traps bots */}
+        <div aria-hidden="true" style={{ position: 'absolute', left: '-9999px', top: '-9999px', opacity: 0, height: 0, overflow: 'hidden' }}>
+          <label htmlFor="_hp_field">Leave this empty</label>
+          <input id="_hp_field" type="text" name="website" autoComplete="off" tabIndex={-1} value={form._hp} onChange={e => setForm({...form, _hp: e.target.value})} />
         </div>
 
         {/* Form Body */}
