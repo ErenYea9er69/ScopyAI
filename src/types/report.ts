@@ -2,12 +2,15 @@ import { z } from 'zod';
 
 // -- Shared primitives --
 
-export const confidenceLevel = z.enum(['high', 'medium', 'low']);
+export const confidenceLevel = z.preprocess(
+  (val) => String(val).toLowerCase(),
+  z.enum(['high', 'medium', 'low'])
+).catch('medium');
 export type ConfidenceLevel = z.infer<typeof confidenceLevel>;
 
 export const citedClaim = z.object({
   claim: z.string(),
-  source: z.string().optional(),
+  source: z.coerce.string().optional(),
   confidence: confidenceLevel,
 });
 export type CitedClaim = z.infer<typeof citedClaim>;
@@ -58,9 +61,9 @@ export type Layer1 = z.infer<typeof layer1Schema>;
 // -- Layer 2: Market Intelligence --
 
 export const layer2Schema = z.object({
-  tam: z.object({ range: z.string(), confidence: confidenceLevel, sources: z.array(z.string()) }),
-  sam: z.object({ range: z.string(), confidence: confidenceLevel, sources: z.array(z.string()) }),
-  som: z.object({ range: z.string(), confidence: confidenceLevel, sources: z.array(z.string()) }),
+  tam: z.object({ range: z.string(), confidence: confidenceLevel, sources: z.array(z.coerce.string()).optional().default([]) }),
+  sam: z.object({ range: z.string(), confidence: confidenceLevel, sources: z.array(z.coerce.string()).optional().default([]) }),
+  som: z.object({ range: z.string(), confidence: confidenceLevel, sources: z.array(z.coerce.string()).optional().default([]) }),
   trendTrajectory: z.object({
     direction: z.enum(['growing', 'stable', 'declining']),
     searchVolumeTrend: z.string(),
@@ -146,7 +149,7 @@ export type Layer4 = z.infer<typeof layer4Schema>;
 // -- Layer 5: Unit Economics --
 
 export const layer5Schema = z.object({
-  cacBenchmark: z.object({ range: z.string(), sources: z.array(z.string()), confidence: confidenceLevel }),
+  cacBenchmark: z.object({ range: z.string(), sources: z.array(z.coerce.string()).optional().default([]), confidence: confidenceLevel }),
   ltvBenchmark: z.object({ range: z.string(), churnRate: z.string(), confidence: confidenceLevel }),
   ltvCacVerdict: z.object({ ratio: z.string(), verdict: z.string() }),
   breakEven: z.object({ timeline: z.string(), assumptions: z.array(z.string()) }),
@@ -166,7 +169,7 @@ export const layer6Schema = z.object({
   validationRoadmap: z.array(z.object({ step: z.string(), cost: z.string(), expectedOutcome: z.string() })),
   futureTrends: z.array(z.object({ trend: z.string(), trigger: z.string(), timing: z.string() })),
   distributionLeverage: z.array(z.object({ lever: z.string(), description: z.string() })),
-  revenueModelFit: z.array(z.object({ model: z.string(), fit: z.string(), reasoning: z.string() })),
+  revenueModelFit: z.array(z.object({ model: z.string(), fit: z.string(), reasoning: z.string().optional().default('') })),
   notFound: z.array(z.string()).optional(),
 });
 export type Layer6 = z.infer<typeof layer6Schema>;
@@ -191,7 +194,7 @@ export const layer8Schema = z.object({
     title: z.string(),
     content: z.string(),
     confidence: confidenceLevel,
-    sources: z.array(z.string()).optional(),
+    sources: z.array(z.coerce.string()).optional().default([]),
   })),
   notFound: z.array(z.string()).optional(),
 });

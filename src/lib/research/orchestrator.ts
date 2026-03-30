@@ -28,10 +28,27 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
   // Start parallel requests
   console.log(`[Orchestrator] Firing parallel intel queries for ${intake.niche}...`);
 
+  // Map display names to actual domains for Tavily's includeDomains filter
+  const platformToDomain: Record<string, string> = {
+    'Reddit': 'reddit.com',
+    'G2 Reviews': 'g2.com',
+    'Trustpilot': 'trustpilot.com',
+    'X / Twitter': 'x.com',
+    'Facebook Groups': 'facebook.com',
+    'Yelp': 'yelp.com',
+    'LinkedIn': 'linkedin.com',
+    'Quora': 'quora.com',
+    'HackerNews': 'news.ycombinator.com',
+  };
+
+  const complaintDomains = intake.complaintPlatforms
+    .map(p => platformToDomain[p] || p)
+    .filter(d => d.includes('.'));  // Only keep valid-looking domains
+
   const [marketRes, compRes, painRes, trendRes, regRes, googleFallback] = await Promise.all([
     tavily.searchMarket(intake.niche, intake.geography),
     tavily.searchCompetitors(intake.niche),
-    tavily.searchPainPoints(intake.niche, intake.complaintPlatforms),
+    tavily.searchPainPoints(intake.niche, complaintDomains),
     tavily.searchTrends(intake.niche),
     tavily.searchRegulations(intake.niche, intake.geography),
     serper.googleSearch(`${intake.niche} software solutions ${intake.geography}`) // Fallback/Supplemental

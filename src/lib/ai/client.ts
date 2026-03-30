@@ -1,19 +1,22 @@
 import OpenAI from 'openai';
 import { z } from 'zod';
 
-// Ensure this environment variable is set
+// LongCat API Configuration — reads from .env.local
 const apiKey = process.env.LONGCAT_API_KEY || 'dummy-key';
+const baseURL = process.env.LONGCAT_BASE_URL || 'https://api.longcat.chat/v1';
 
 export const openai = new OpenAI({
-  baseURL: 'https://api.longcat.chat/v1',
-  apiKey: apiKey,
+  baseURL,
+  apiKey,
 });
 
-// Model Constants
+// Model Constants — override via env if they change
 export const MODELS = {
-  REASONING: 'LongCat-Flash-Thinking-2601', // Heavy lifting, debate, layer analysis
-  ROUTER: 'LongCat-Flash-Lite',             // Fast tasks, persona routing, JSON formatting
+  REASONING: process.env.LONGCAT_MODEL_REASONING || 'google/gemini-2.5-flash',
+  ROUTER: process.env.LONGCAT_MODEL_ROUTER || 'google/gemini-2.5-flash',
 };
+
+console.log(`[LongCat] Configured: baseURL=${baseURL}, reasoning=${MODELS.REASONING}, router=${MODELS.ROUTER}`);
 
 // -- Token Tracking System --
 // In a real app, this syncs with Supabase/Redis. We maintain local fallback here.
