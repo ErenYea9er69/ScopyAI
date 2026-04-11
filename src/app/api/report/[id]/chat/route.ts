@@ -22,7 +22,7 @@ COMPOSITE SCORE: ${report.debate?.compositeScore ?? 'N/A'}/100
 FINAL VERDICT: ${report.debate?.finalVerdict ?? 'N/A'}
 
 === FULL REPORT DATA ===
-${JSON.stringify(report.layers, null, 2)}
+${JSON.stringify(report.layers)}
 
 === TRI-AGENT DEBATE ===
 Builder: ${report.debate?.builder?.score ?? 'N/A'}/100 — ${report.debate?.builder?.reasoning ?? ''}

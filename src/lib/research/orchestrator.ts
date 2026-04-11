@@ -10,6 +10,7 @@ type IntakeData = {
   assets: string[];
   competitorUrls: string[];
   complaintPlatforms: string[];
+  goalTimeline: string;
 };
 
 export type ResearchData = {
@@ -54,9 +55,20 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
     serper.googleSearch(`${intake.niche} software solutions ${intake.geography}`) // Fallback/Supplemental
   ]);
 
+  const competitorExtractions = await Promise.all(
+    (intake.competitorUrls || []).filter(u => u.trim()).map(url => tavily.extractPage(url))
+  );
+
+  const extractedCompetitorsContext = competitorExtractions
+    .filter(Boolean)
+    .flatMap((ex: any) => ex?.results?.map((r: any) => r.rawContent || r.content) || []);
+
   // Aggregate Raw Strings (for LLM Context)
   const marketSize = [marketRes?.answer, ...(marketRes?.results?.map((r: any) => r.content) || [])].filter(Boolean) as string[];
-  const competitors = [compRes?.results?.map((r: any) => r.content)].flat().filter(Boolean);
+  const competitors = [
+    ...extractedCompetitorsContext,
+    [compRes?.results?.map((r: any) => r.content)].flat()
+  ].flat().filter(Boolean);
   const painPoints = [painRes?.results?.map((r: any) => r.content)].flat().filter(Boolean);
   const trends = [trendRes?.answer, ...(trendRes?.results?.map((r: any) => r.content) || [])].filter(Boolean) as string[];
   const regulations = [regRes?.answer, ...(regRes?.results?.map((r: any) => r.content) || [])].filter(Boolean) as string[];

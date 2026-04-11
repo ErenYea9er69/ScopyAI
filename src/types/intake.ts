@@ -10,6 +10,7 @@ export const intakeSchema = z.object({
   competitorUrls: z.array(z.string()).default([]),
   complaintPlatforms: z.array(z.string()).default([]),
   founderFit: z.array(z.string()).default([]),
+  goalTimeline: z.string().default(''),
 });
 
 export type IntakeInput = z.infer<typeof intakeSchema>;

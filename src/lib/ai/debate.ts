@@ -37,7 +37,13 @@ Your role is to find EVERY reason this idea could succeed.
 Score opportunity 0–100. Highlight demand signals, market gaps, timing advantages.
 Return a signal: "GO" or "CAUTION" with reasoning.
 
-OUTPUT: Valid JSON with keys: score, signal, reasoning, keyPoints[]
+OUTPUT: Valid JSON exactly matching this structure (no markdown wrappers):
+{
+  "score": 0,
+  "signal": "GO|CAUTION",
+  "reasoning": "string",
+  "keyPoints": ["string"]
+}
 `.trim();
 
   const user = `
@@ -60,7 +66,13 @@ Your role is to find EVERY reason this idea will fail.
 Score risk 0–100 (100 = maximum danger). Highlight moat weakness, AI disruption, saturation.
 Return a signal: "KILL", "PIVOT", or "GO" with reasoning.
 
-OUTPUT: Valid JSON with keys: score, signal, reasoning, keyPoints[]
+OUTPUT: Valid JSON exactly matching this structure (no markdown wrappers):
+{
+  "score": 0,
+  "signal": "KILL|PIVOT|GO",
+  "reasoning": "string",
+  "keyPoints": ["string"]
+}
 `.trim();
 
   const user = `
@@ -79,7 +91,7 @@ Be ruthless. Name specific threats. Assume the worst case.
 async function runOperator(
   niche: string,
   research: ResearchData,
-  userContext: { budget: string; time: string; assets: string[]; stage: string }
+  userContext: { budget: string; time: string; assets: string[]; stage: string; founderFit?: string[] }
 ) {
   const system = `
 You are The Operator — the execution reality-check agent in a tri-agent debate.
@@ -88,7 +100,13 @@ what it would take to execute in this niche.
 Score execution difficulty 0–100 (100 = impossible for this user).
 Return a signal: "EASY", "HARD", or "IMPOSSIBLE" with specific blockers.
 
-OUTPUT: Valid JSON with keys: score, signal, reasoning, keyPoints[]
+OUTPUT: Valid JSON exactly matching this structure (no markdown wrappers):
+{
+  "score": 0,
+  "signal": "EASY|HARD|IMPOSSIBLE",
+  "reasoning": "string",
+  "keyPoints": ["string"]
+}
 `.trim();
 
   const user = `
@@ -97,6 +115,7 @@ USER BUDGET: ${userContext.budget}
 USER TIME: ${userContext.time}
 USER ASSETS: ${userContext.assets.join(', ') || 'None'}
 USER STAGE: ${userContext.stage}
+USER FOUNDER FIT: ${userContext.founderFit?.join(', ') || 'None'}
 
 ${researchSummary(research)}
 
@@ -121,7 +140,14 @@ evaluating the same niche. Weigh all evidence and produce a final conditional ve
 Format: "GO if [condition]. PIVOT if [condition]. KILL if [condition] within [N] days."
 Also produce a compositeScore 0-100 (weighted average of opportunity, inverse-risk, and feasibility).
 
-OUTPUT: Valid JSON with keys: builder{}, cynic{}, operator{}, finalVerdict (string), compositeScore (number)
+OUTPUT: Valid JSON exactly matching this structure (no markdown wrappers):
+{
+  "builder": { "score": 0, "signal": "string", "reasoning": "string", "keyPoints": ["string"] },
+  "cynic": { "score": 0, "signal": "string", "reasoning": "string", "keyPoints": ["string"] },
+  "operator": { "score": 0, "signal": "string", "reasoning": "string", "keyPoints": ["string"] },
+  "finalVerdict": "string",
+  "compositeScore": 0
+}
 `.trim();
 
   const user = `
@@ -153,7 +179,7 @@ Weigh all three perspectives. Produce the final conditional verdict and composit
 export async function runTriAgentDebate(
   niche: string,
   research: ResearchData,
-  userContext: { budget: string; time: string; assets: string[]; stage: string }
+  userContext: { budget: string; time: string; assets: string[]; stage: string; founderFit?: string[] }
 ): Promise<DebateResult> {
   console.log('[Debate] Running Builder, Cynic, Operator in parallel...');
 

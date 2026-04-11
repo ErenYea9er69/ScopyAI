@@ -8,6 +8,7 @@ const baseURL = process.env.LONGCAT_BASE_URL || 'https://api.longcat.chat/v1';
 export const openai = new OpenAI({
   baseURL,
   apiKey,
+  timeout: 120000,
 });
 
 // Model Constants — override via env if they change
@@ -20,18 +21,21 @@ console.log(`[LongCat] Configured: baseURL=${baseURL}, reasoning=${MODELS.REASON
 
 // -- Token Tracking System --
 // In a real app, this syncs with Supabase/Redis. We maintain local fallback here.
-let dailyTokenUsage = 0;
+const globalTokenStore = globalThis as unknown as { dailyTokenUsage: number };
+if (typeof globalTokenStore.dailyTokenUsage === 'undefined') {
+  globalTokenStore.dailyTokenUsage = 0;
+}
 const DAILY_LIMIT = 500_000;
 
 export function trackTokenUsage(tokens: number) {
-  dailyTokenUsage += tokens;
-  if (dailyTokenUsage > DAILY_LIMIT * 0.9) {
-    console.warn(`[LongCat] Token Warning: Reached ${dailyTokenUsage} / ${DAILY_LIMIT}`);
+  globalTokenStore.dailyTokenUsage += tokens;
+  if (globalTokenStore.dailyTokenUsage > DAILY_LIMIT * 0.9) {
+    console.warn(`[LongCat] Token Warning: Reached ${globalTokenStore.dailyTokenUsage} / ${DAILY_LIMIT}`);
   }
 }
 
 export function getCurrentUsage() {
-  return dailyTokenUsage;
+  return globalTokenStore.dailyTokenUsage;
 }
 
 // -- Generative Helpers --
@@ -48,19 +52,24 @@ export async function generateStructuredOutput<T>(
 ): Promise<T> {
   let attempts = 0;
   
-  if (dailyTokenUsage >= DAILY_LIMIT) {
+  if (getCurrentUsage() >= DAILY_LIMIT) {
     throw new Error('Daily token usage limit exceeded');
   }
   
+  let currentMessages: any[] = [
+    { role: 'system', content: `${systemPrompt}\n\nIMPORTANT: You must output ONLY raw, valid JSON that tightly matches the requested schema. Do not wrap in markdown tags like \`\`\`json.` },
+    { role: 'user', content: userPrompt }
+  ];
+
+  let lastGeneratedContent = '';
+
   while (attempts <= maxRetries) {
     try {
       const response = await openai.chat.completions.create({
         model,
-        messages: [
-          { role: 'system', content: `${systemPrompt}\n\nIMPORTANT: You must output ONLY raw, valid JSON that tightly matches the requested schema. Do not wrap in markdown tags like \`\`\`json.` },
-          { role: 'user', content: userPrompt }
-        ],
+        messages: currentMessages,
         temperature: 0.1, 
+        response_format: { type: 'json_object' }
       });
 
       // Track usage
@@ -68,7 +77,12 @@ export async function generateStructuredOutput<T>(
         trackTokenUsage(response.usage.total_tokens);
       }
 
-      const content = response.choices[0]?.message?.content || '{}';
+      let content = response.choices[0]?.message?.content || '{}';
+      lastGeneratedContent = content;
+      
+      // Strip <think> tags if present
+      content = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+      
       const cleanJson = content.replace(/```json/gi, '').replace(/```/g, '').trim();
       
       const parsed = JSON.parse(cleanJson);
@@ -83,6 +97,10 @@ export async function generateStructuredOutput<T>(
         throw new Error('LLM failed to generate valid structured output.');
       }
       
+      // Feedback to LLM
+      currentMessages.push({ role: 'assistant', content: lastGeneratedContent || '{}' });
+      currentMessages.push({ role: 'user', content: `That resulted in a validation error: ${error?.message || error}. Please fix the JSON output to strictly match the schema.` });
+
       // Exponential backoff
       await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempts)));
     }

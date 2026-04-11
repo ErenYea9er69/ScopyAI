@@ -41,10 +41,12 @@ Archetype Definitions:
 4. 'consultant' - B2B advisory background. White-glove services, expertise, corporate coaching.
 5. 'general' - Side hustle, physical product, career pivot, or ambiguous mix. Default fallback.
 
-Given the JSON payload of their input, respond strictly with:
-- archetype (enum)
-- confidence (0-100)
-- reasoning (short 1 sentence why this fits best)
+Given the JSON payload of their input, respond strictly with valid JSON exactly matching this structure (no markdown wrappers):
+{
+  "archetype": "dev|marketer|creator|consultant|general",
+  "confidence": 0,
+  "reasoning": "short 1 sentence why this fits best"
+}
 `.trim();
 
   const userPrompt = JSON.stringify(intakeData, null, 2);

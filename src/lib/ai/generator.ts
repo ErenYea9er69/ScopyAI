@@ -44,6 +44,7 @@ export type IntakeData = {
   competitorUrls: string[];
   complaintPlatforms: string[];
   founderFit: string[];
+  goalTimeline: string;
 };
 
 type ProgressCallback = (update: {
@@ -104,6 +105,8 @@ export async function generateReport(
       time: intake.timeCommitment,
       assets: intake.assets,
       stage: intake.stage,
+      founderFit: intake.founderFit,
+      timeline: intake.goalTimeline,
     };
 
     // --- Batch 1: Layers 1, 2, 3 (parallel) ---

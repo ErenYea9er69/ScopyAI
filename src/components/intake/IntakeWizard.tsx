@@ -67,6 +67,7 @@ export function IntakeWizard() {
           competitorUrls: form.urls.split(',').map(u => u.trim()).filter(Boolean),
           complaintPlatforms: form.sources,
           founderFit: form.fit,
+          goalTimeline: form.timeline,
         }),
       });
 

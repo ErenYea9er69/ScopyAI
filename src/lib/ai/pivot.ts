@@ -56,7 +56,21 @@ Also include:
 - triggered: true
 - reason: why the pivot was triggered
 
-OUTPUT: Valid JSON with keys: triggered, reason, pivots[]
+OUTPUT: Valid JSON exactly matching this structure (no markdown wrappers):
+{
+  "triggered": true,
+  "reason": "string",
+  "pivots": [
+    {
+      "rank": "A|B|C",
+      "title": "string",
+      "description": "string",
+      "newSaturation": 0,
+      "executionFit": "Easy|Moderate|Hard|Impossible",
+      "reasoning": "string"
+    }
+  ]
+}
 `.trim();
 
   const user = `

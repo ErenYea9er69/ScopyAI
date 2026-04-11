@@ -107,6 +107,7 @@ async function runDuel(duelId: string, niches: string[], geography: string) {
     competitorUrls: [] as string[],
     complaintPlatforms: [] as string[],
     founderFit: [] as string[],
+    goalTimeline: '',
   }));
 
   const researchResults = await Promise.allSettled(
@@ -155,8 +156,35 @@ Calculate a weighted composite score:
 Declare an overall winner with reasoning.
 For each dimension, name which niche wins and why.
 List 2-3 specific strengths and weaknesses per niche.
-
-OUTPUT: Valid JSON only. No markdown.`;
+OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers):
+{
+  "contestants": [
+    {
+      "niche": "string",
+      "scores": {
+        "marketSize": 0,
+        "competition": 0,
+        "timing": 0,
+        "moatPotential": 0,
+        "executionEase": 0,
+        "revenueSpeed": 0
+      },
+      "composite": 0,
+      "verdict": "string",
+      "strengths": ["string"],
+      "weaknesses": ["string"]
+    }
+  ],
+  "winner": "string",
+  "reasoning": "string",
+  "dimensionWinners": [
+    {
+      "dimension": "string",
+      "winner": "string",
+      "reason": "string"
+    }
+  ]
+}`;
 
   const userPrompt = `GEOGRAPHY: ${geography}
 

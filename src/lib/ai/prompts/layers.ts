@@ -27,14 +27,18 @@ export function layer1Prompt(niche: string, geo: string, research: { painPoints:
 You are the Audience Intelligence module of a world-class market analysis engine.
 Your job is to deliver a rigorous, citation-backed analysis of the target audience for a specific niche.
 
-OUTPUT FORMAT: Valid JSON matching the schema below (no markdown, no backticks).
-Every claim must have a "confidence" field: "high", "medium", or "low".
-Every claim should cite its source when possible.
-Include a "notFound" array listing anything you couldn't determine.
-
-JSON Schema keys expected:
-painPoints[], buyerLanguage[], purchaseTriggers[], avatar{}, hiddenObjections[],
-desiresAndDreams[], shadowAvatar{}, paymentThreshold{}, notFound[]
+OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers).
+{
+  "painPoints": [ { "pain": "string", "frequency": "string", "emotionalIntensity": "string", "wtpSignal": "string", "source": "string", "confidence": "high|medium|low" } ],
+  "buyerLanguage": [ { "quote": "string", "source": "string", "context": "string" } ],
+  "purchaseTriggers": [ { "claim": "string", "source": "string", "confidence": "high|medium|low" } ],
+  "avatar": { "age": "string", "income": "string", "platforms": ["string"], "identity": "string", "selfNarrative": "string", "trustedInfluencers": ["string"], "contentConsumed": ["string"] },
+  "hiddenObjections": [ { "claim": "string", "source": "string", "confidence": "high|medium|low" } ],
+  "desiresAndDreams": [ { "claim": "string", "source": "string", "confidence": "high|medium|low" } ],
+  "shadowAvatar": { "description": "string", "whyTheyWontBuy": "string", "howToExclude": "string" },
+  "paymentThreshold": { "low": "string", "mid": "string", "high": "string", "reasoning": "string" },
+  "notFound": ["string"]
+}
 `.trim();
 
   const user = `
@@ -60,12 +64,18 @@ export function layer2Prompt(niche: string, geo: string, research: { marketSize:
 You are the Market Intelligence module. Provide TAM/SAM/SOM with confidence ranges (NOT single numbers),
 5-year trend trajectory, international opportunity, adjacent markets, timing verdict, and sentiment velocity.
 
-OUTPUT FORMAT: Valid JSON. Every numeric range must include sources and confidence level.
-Include a "notFound" array for gaps.
-
-JSON Schema keys expected:
-tam{}, sam{}, som{}, trendTrajectory{}, internationalOpportunity{}, adjacentMarkets[],
-marketTimingVerdict, sentimentVelocity{}, notFound[]
+OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers).
+{
+  "tam": { "range": "string", "confidence": "high|medium|low", "sources": ["url"] },
+  "sam": { "range": "string", "confidence": "high|medium|low", "sources": ["url"] },
+  "som": { "range": "string", "confidence": "high|medium|low", "sources": ["url"] },
+  "trendTrajectory": { "direction": "growing|stable|declining", "searchVolumeTrend": "string", "socialVelocity": "string", "fundingActivity": "string", "mediaCoverage": "string" },
+  "internationalOpportunity": { "bestAlternateMarket": "string", "tamMultiplier": "string", "competitionReduction": "string" },
+  "adjacentMarkets": [ { "market": "string", "overlap": "string", "opportunity": "string" } ],
+  "marketTimingVerdict": "string",
+  "sentimentVelocity": { "overall": "string", "trend": "string" },
+  "notFound": ["string"]
+}
 `.trim();
 
   const user = `
@@ -87,7 +97,7 @@ export function layer3Prompt(
   niche: string,
   geo: string,
   research: { trends: string[]; regulations: string[]; competitors: string[] },
-  userContext: { budget: string; time: string; assets: string[] }
+  userContext: { budget: string; time: string; assets: string[]; founderFit?: string[] }
 ) {
   const system = `
 You are the Survival Intelligence module — the adversarial risk detector.
@@ -95,12 +105,18 @@ Your job is to identify every threat that could kill this idea.
 Name specific AI models, specific platforms, specific competitors.
 Cross-reference the user's budget and skills against execution difficulty.
 
-OUTPUT FORMAT: Valid JSON with confidence scoring and source citations.
-Include a "notFound" array.
-
-JSON Schema keys expected:
-dyingTrendSignals[], aiDisruptionRisk{}, platformDependency{}, saturationScore{},
-legalMatrix[], gorillaCompetitors[], executionDifficulty{}, scenarioSimulator[], notFound[]
+OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers).
+{
+  "dyingTrendSignals": [ { "claim": "string", "source": "string", "confidence": "high|medium|low" } ],
+  "aiDisruptionRisk": { "score": 0, "threateningModel": "string", "valueAtRisk": "string", "confidence": "high|medium|low" },
+  "platformDependency": { "score": 0, "primaryPlatform": "string", "risk": "string" },
+  "saturationScore": { "percentage": 0, "reasoning": "string" },
+  "legalMatrix": [ { "jurisdiction": "string", "status": "string", "risk": "string" } ],
+  "gorillaCompetitors": [ { "name": "string", "threat": "string", "defence": "string" } ],
+  "executionDifficulty": { "score": 0, "blockers": ["string"] },
+  "scenarioSimulator": [ { "threat": "string", "probability": "string", "consequence": "string" } ],
+  "notFound": ["string"]
+}
 `.trim();
 
   const user = `
@@ -109,6 +125,7 @@ GEOGRAPHY: ${geo}
 USER BUDGET: ${userContext.budget}
 USER TIME: ${userContext.time}
 USER ASSETS: ${userContext.assets.join(', ') || 'None specified'}
+USER FOUNDER FIT: ${userContext.founderFit?.join(', ') || 'None specified'}
 
 === RESEARCH DATA ===
 ${researchBlock([...research.trends, ...research.regulations, ...research.competitors])}
@@ -127,11 +144,16 @@ export function layer4Prompt(niche: string, research: { competitors: string[] })
 You are the Competitor Intelligence module. Produce deep profiles of the top competitors,
 identify market gaps, SEO white space, pricing spectrum, substitute threats, and competitor velocity.
 
-OUTPUT FORMAT: Valid JSON with sources. Include "notFound" array.
-
-JSON Schema keys expected:
-competitors[], marketGaps[], seoWhiteSpace[], pricingSpectrum{}, substituteThreats[],
-competitorVelocity[], notFound[]
+OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers).
+{
+  "competitors": [ { "name": "string", "url": "string", "estimatedRevenue": "string", "traffic": "string", "pricing": "string", "strengths": ["string"], "weaknesses": ["string"] } ],
+  "marketGaps": [ { "claim": "string", "source": "string", "confidence": "high|medium|low" } ],
+  "seoWhiteSpace": [ { "keyword": "string", "difficulty": "string", "opportunity": "string" } ],
+  "pricingSpectrum": { "low": "string", "mid": "string", "high": "string", "yourSweetSpot": "string" },
+  "substituteThreats": [ { "substitute": "string", "risk": "string" } ],
+  "competitorVelocity": [ { "competitor": "string", "momentum": "string", "direction": "string" } ],
+  "notFound": ["string"]
+}
 `.trim();
 
   const user = `
@@ -157,12 +179,16 @@ export function layer5Prompt(
 You are the Unit Economics module. Calculate CAC benchmarks, LTV estimates, LTV:CAC verdict,
 break-even timeline, burn rate scenarios using the user's actual budget, and optimal price point.
 
-OUTPUT FORMAT: Valid JSON. Use ranges where uncertain. Include confidence and sources.
-Include "notFound" array.
-
-JSON Schema keys expected:
-cacBenchmark{}, ltvBenchmark{}, ltvCacVerdict{}, breakEven{}, burnRateScenarios[],
-optimalPricePoint{}, notFound[]
+OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers).
+{
+  "cacBenchmark": { "range": "string", "sources": ["string"], "confidence": "high|medium|low" },
+  "ltvBenchmark": { "range": "string", "churnRate": "string", "confidence": "high|medium|low" },
+  "ltvCacVerdict": { "ratio": "string", "verdict": "string" },
+  "breakEven": { "timeline": "string", "assumptions": ["string"] },
+  "burnRateScenarios": [ { "scenario": "string", "monthlyBurn": "string", "runway": "string" } ],
+  "optimalPricePoint": { "price": "string", "reasoning": "string" },
+  "notFound": ["string"]
+}
 `.trim();
 
   const user = `
@@ -192,11 +218,18 @@ You are the Offer & GTM module. Generate concrete offer ideas with pricing logic
 a week-by-week GTM plan, platform-specific hooks, channel map with decay signals,
 validation roadmap with costs, future trends, distribution leverage, and revenue model fit.
 
-OUTPUT FORMAT: Valid JSON. Include confidence per offer. Include "notFound" array.
-
-JSON Schema keys expected:
-offerIdeas[], gtmPlan[], platformHooks[], channelMap[], validationRoadmap[],
-futureTrends[], distributionLeverage[], revenueModelFit[], notFound[]
+OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers).
+{
+  "offerIdeas": [ { "offer": "string", "pricingLogic": "string", "confidence": "high|medium|low" } ],
+  "gtmPlan": [ { "week": "string", "action": "string", "cost": "string" } ],
+  "platformHooks": [ { "platform": "string", "hook": "string", "angle": "string" } ],
+  "channelMap": [ { "channel": "string", "effectiveness": "string", "decaySignal": "string" } ],
+  "validationRoadmap": [ { "step": "string", "cost": "string", "expectedOutcome": "string" } ],
+  "futureTrends": [ { "trend": "string", "trigger": "string", "timing": "string" } ],
+  "distributionLeverage": [ { "lever": "string", "description": "string" } ],
+  "revenueModelFit": [ { "model": "string", "fit": "string", "reasoning": "string" } ],
+  "notFound": ["string"]
+}
 `.trim();
 
   const user = `
@@ -226,8 +259,11 @@ community moat, and switching cost architecture.
 
 Each moat must include: type, strategy, implementation steps, and time to effect.
 
-OUTPUT FORMAT: Valid JSON. Include "notFound" array.
-JSON Schema keys expected: moats[], notFound[]
+OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers).
+{
+  "moats": [ { "type": "string", "strategy": "string", "implementation": "string", "timeToEffect": "string" } ],
+  "notFound": ["string"]
+}
 `.trim();
 
   const user = `
@@ -296,8 +332,11 @@ ${modules.map((m, i) => `${i + 1}. ${m}`).join('\n')}
 
 Each module must include: title, content (detailed analysis), confidence level, and source citations.
 
-OUTPUT FORMAT: Valid JSON. Include "notFound" array.
-JSON Schema keys expected: modules[], notFound[]
+OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers).
+{
+  "modules": [ { "title": "string", "content": "string", "confidence": "high|medium|low", "sources": ["string"] } ],
+  "notFound": ["string"]
+}
 `.trim();
 
   const user = `

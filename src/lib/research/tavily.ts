@@ -4,13 +4,16 @@ const TAVILY_API_KEY = process.env.TAVILY_API_KEY || 'dummy_tavily';
 const tvly = tavily({ apiKey: TAVILY_API_KEY });
 
 // -- Credit Tracking System --
-let monthlyCreditUsage = 0;
+const globalTavilyStore = globalThis as unknown as { monthlyCreditUsage: number };
+if (typeof globalTavilyStore.monthlyCreditUsage === 'undefined') {
+  globalTavilyStore.monthlyCreditUsage = 0;
+}
 const TAVILY_MONTHLY_LIMIT = 1000;
 
 function trackTavilyUsage(credits: number) {
-  monthlyCreditUsage += credits;
-  if (monthlyCreditUsage > TAVILY_MONTHLY_LIMIT * 0.9) {
-    console.warn(`[Tavily] Usage Warning: Reached ${monthlyCreditUsage} / ${TAVILY_MONTHLY_LIMIT} requests.`);
+  globalTavilyStore.monthlyCreditUsage += credits;
+  if (globalTavilyStore.monthlyCreditUsage > TAVILY_MONTHLY_LIMIT * 0.9) {
+    console.warn(`[Tavily] Usage Warning: Reached ${globalTavilyStore.monthlyCreditUsage} / ${TAVILY_MONTHLY_LIMIT} requests.`);
   }
 }
 
@@ -18,10 +21,11 @@ function trackTavilyUsage(credits: number) {
  * Common wrapper to catch errors and trace usage natively
  */
 async function tavilySearch(query: string, options?: any) {
-  trackTavilyUsage(1);
+  const depth = options?.searchDepth || 'basic';
+  trackTavilyUsage(depth === 'advanced' ? 2 : 1);
   try {
     const response = await tvly.search(query, {
-      searchDepth: 'advanced',
+      searchDepth: 'basic',
       includeImages: false,
       includeRawContent: false,
       ...options,
@@ -37,7 +41,7 @@ async function tavilySearch(query: string, options?: any) {
 
 export async function searchMarket(niche: string, geography: string) {
   const query = `${niche} market size TAM SAM growth rate 2024 2025 in ${geography}`;
-  const response = await tavilySearch(query, { includeAnswer: true });
+  const response = await tavilySearch(query, { includeAnswer: true, searchDepth: 'advanced', timeRange: 'year' });
   return { answer: response.answer, results: response.results };
 }
 
@@ -55,14 +59,14 @@ export async function searchPainPoints(niche: string, sources: string[]) {
   const response = await tavilySearch(query, {
     includeDomains: domains,
     maxResults: 7,
-    searchDepth: 'basic', // Basic depth is often enough for forum snippets
+    searchDepth: 'advanced', // Advanced depth pulls deeper thread context from forums
   });
   return { results: response.results };
 }
 
 export async function searchTrends(keywords: string) {
   const query = `${keywords} trend velocity sentiment analysis future outlook`;
-  const response = await tavilySearch(query, { includeAnswer: true, maxResults: 3 });
+  const response = await tavilySearch(query, { includeAnswer: true, maxResults: 3, timeRange: 'year' });
   return { answer: response.answer, results: response.results };
 }
 

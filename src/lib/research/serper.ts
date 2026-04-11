@@ -2,6 +2,7 @@ const SERPER_API_KEY = process.env.SERPER_API_KEY || 'dummy_serper';
 
 // Helper for calling Serper API
 async function callSerper(endpoint: 'search' | 'trends', body: any) {
+  if (SERPER_API_KEY === 'dummy_serper') return null;
   try {
     const response = await fetch(`https://google.serper.dev/${endpoint}`, {
       method: 'POST',
