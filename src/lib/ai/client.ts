@@ -24,7 +24,6 @@ export function getRandomClient() {
   return openaiClients[Math.floor(Math.random() * openaiClients.length)];
 }
 
-// Keep a default export for backward compatibility
 export const openai = openaiClients[0];
 
 // Model Constants — override via env if they change
