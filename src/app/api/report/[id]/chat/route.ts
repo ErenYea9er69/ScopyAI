@@ -9,7 +9,7 @@
  */
 
 import { NextRequest } from 'next/server';
-import { openai, MODELS, trackTokenUsage } from '@/lib/ai/client';
+import { getRandomClient, MODELS, trackTokenUsage } from '@/lib/ai/client';
 import { reportStore } from '@/lib/store';
 
 function buildSystemPrompt(report: any): string {
@@ -76,7 +76,7 @@ export async function POST(
   ];
 
   try {
-    const stream = await openai.chat.completions.create({
+    const stream = await getRandomClient().chat.completions.create({
       model: MODELS.REASONING,
       messages,
       temperature: 0.5,

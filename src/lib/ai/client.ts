@@ -2,14 +2,30 @@ import OpenAI from 'openai';
 import { z } from 'zod';
 
 // LongCat API Configuration — reads from .env.local
-const apiKey = process.env.LONGCAT_API_KEY || 'dummy-key';
 const baseURL = process.env.LONGCAT_BASE_URL || 'https://api.longcat.chat/v1';
 
-export const openai = new OpenAI({
+const longCatKeys = [
+  process.env.LONGCAT_API_KEY,
+  process.env.LONGCAT_API_KEY_2,
+  process.env.LONGCAT_API_KEY_3,
+  process.env.LONGCAT_API_KEY_4,
+  process.env.LONGCAT_API_KEY_5,
+].filter(Boolean) as string[];
+
+if (longCatKeys.length === 0) longCatKeys.push('dummy-key');
+
+export const openaiClients = longCatKeys.map(key => new OpenAI({
   baseURL,
-  apiKey,
+  apiKey: key,
   timeout: 120000,
-});
+}));
+
+export function getRandomClient() {
+  return openaiClients[Math.floor(Math.random() * openaiClients.length)];
+}
+
+// Keep a default export for backward compatibility
+export const openai = openaiClients[0];
 
 // Model Constants — override via env if they change
 export const MODELS = {
@@ -48,7 +64,7 @@ export async function generateStructuredOutput<T>(
   userPrompt: string,
   schema: z.ZodSchema<T>,
   model: string = MODELS.REASONING,
-  maxRetries = 3
+  maxRetries = 5
 ): Promise<T> {
   let attempts = 0;
   
@@ -62,10 +78,11 @@ export async function generateStructuredOutput<T>(
   ];
 
   let lastGeneratedContent = '';
+  let clientIndex = Math.floor(Math.random() * openaiClients.length);
 
   while (attempts <= maxRetries) {
     try {
-      const response = await openai.chat.completions.create({
+      const response = await openaiClients[clientIndex].chat.completions.create({
         model,
         messages: currentMessages,
         temperature: 0.1, 
@@ -90,7 +107,10 @@ export async function generateStructuredOutput<T>(
       
     } catch (error: any) {
       attempts++;
-      console.warn(`[LongCat API] Attempt ${attempts} failed:`, error?.message || error);
+      console.warn(`[LongCat API] Attempt ${attempts} failed on key index ${clientIndex}:`, error?.message || error);
+      
+      // Rotate to the next client in the pool automatically
+      clientIndex = (clientIndex + 1) % openaiClients.length;
       
       if (attempts > maxRetries) {
         console.error('[LongCat API] Max retries reached. Graceful fallback activated.');
@@ -117,7 +137,8 @@ export async function streamThinkingResponse(
   userPrompt: string,
   model: string = MODELS.REASONING
 ) {
-  return await openai.chat.completions.create({
+  const client = getRandomClient();
+  return await client.chat.completions.create({
     model,
     messages: [
       { role: 'system', content: systemPrompt },

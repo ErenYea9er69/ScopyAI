@@ -1,7 +1,14 @@
 import { tavily } from '@tavily/core';
 
-const TAVILY_API_KEY = process.env.TAVILY_API_KEY || 'dummy_tavily';
-const tvly = tavily({ apiKey: TAVILY_API_KEY });
+const tavilyKeys = [
+  process.env.TAVILY_API_KEY,
+  process.env.TAVILY_API_KEY_2,
+  process.env.TAVILY_API_KEY_3,
+].filter(Boolean) as string[];
+
+if (tavilyKeys.length === 0) tavilyKeys.push('dummy_tavily');
+
+const tvlyClients = tavilyKeys.map(k => tavily({ apiKey: k }));
 
 // -- Credit Tracking System --
 const globalTavilyStore = globalThis as unknown as { monthlyCreditUsage: number };
@@ -23,18 +30,26 @@ function trackTavilyUsage(credits: number) {
 async function tavilySearch(query: string, options?: any) {
   const depth = options?.searchDepth || 'basic';
   trackTavilyUsage(depth === 'advanced' ? 2 : 1);
-  try {
-    const response = await tvly.search(query, {
-      searchDepth: 'basic',
-      includeImages: false,
-      includeRawContent: false,
-      ...options,
-    });
-    return response as any; // Cast as any to allow dynamic access to answer/results
-  } catch (error) {
-    console.error(`[Tavily API] Failed on query: "${query}"`, error);
-    return { results: [], answer: '' }; // Added answer to fallback
+  let clientIndex = Math.floor(Math.random() * tvlyClients.length);
+  const maxAttempts = tvlyClients.length;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      const response = await tvlyClients[clientIndex].search(query, {
+        searchDepth: 'basic',
+        includeImages: false,
+        includeRawContent: false,
+        ...options,
+      });
+      return response as any; // Cast as any to allow dynamic access to answer/results
+    } catch (error) {
+      console.warn(`[Tavily API] Failed on query: "${query}" using key index ${clientIndex}.`);
+      clientIndex = (clientIndex + 1) % tvlyClients.length;
+    }
   }
+  
+  console.error(`[Tavily API] All keys exhausted for query: "${query}"`);
+  return { results: [], answer: '' }; // Added answer to fallback
 }
 
 // -- Research Domains --
@@ -78,10 +93,18 @@ export async function searchRegulations(niche: string, geography: string) {
 
 export async function extractPage(url: string) {
   trackTavilyUsage(1); // Extract costs credits too
-  try {
-    return await tvly.extract([url]);
-  } catch (error) {
-    console.warn(`[Tavily Extract] Failed for ${url}`);
-    return null;
+  let clientIndex = Math.floor(Math.random() * tvlyClients.length);
+  const maxAttempts = tvlyClients.length;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await tvlyClients[clientIndex].extract([url]);
+    } catch (error) {
+      console.warn(`[Tavily Extract] Failed for ${url} using key index ${clientIndex}`);
+      clientIndex = (clientIndex + 1) % tvlyClients.length;
+    }
   }
+
+  console.error(`[Tavily Extract] All keys exhausted for URL: ${url}`);
+  return null;
 }
