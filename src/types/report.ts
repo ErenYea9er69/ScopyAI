@@ -54,7 +54,7 @@ export const layer1Schema = z.object({
     high: z.string(),
     reasoning: z.string(),
   }),
-  notFound: z.array(z.string()).optional(),
+  notFound: z.array(z.string()).min(1).default(["No additional limitations identified"]),
 });
 export type Layer1 = z.infer<typeof layer1Schema>;
 
@@ -79,7 +79,7 @@ export const layer2Schema = z.object({
   adjacentMarkets: z.array(z.object({ market: z.string(), overlap: z.string(), opportunity: z.string() })),
   marketTimingVerdict: z.string(),
   sentimentVelocity: z.object({ overall: z.string(), trend: z.string() }),
-  notFound: z.array(z.string()).optional(),
+  notFound: z.array(z.string()).min(1).default(["No additional limitations identified"]),
 });
 export type Layer2 = z.infer<typeof layer2Schema>;
 
@@ -121,7 +121,7 @@ export const layer3Schema = z.object({
     probability: z.string(),
     consequence: z.string(),
   })),
-  notFound: z.array(z.string()).optional(),
+  notFound: z.array(z.string()).min(1).default(["No additional limitations identified"]),
 });
 export type Layer3 = z.infer<typeof layer3Schema>;
 
@@ -143,7 +143,7 @@ export const layer4Schema = z.object({
   pricingSpectrum: z.object({ low: z.string(), mid: z.string(), high: z.string(), yourSweetSpot: z.string() }),
   substituteThreats: z.array(z.object({ substitute: z.string(), risk: z.string() })),
   competitorVelocity: z.array(z.object({ competitor: z.string(), momentum: z.string(), direction: z.string() })),
-  notFound: z.array(z.string()).optional(),
+  notFound: z.array(z.string()).min(1).default(["No additional limitations identified"]),
 });
 export type Layer4 = z.infer<typeof layer4Schema>;
 
@@ -156,7 +156,7 @@ export const layer5Schema = z.object({
   breakEven: z.object({ timeline: z.string(), assumptions: z.array(z.string()) }),
   burnRateScenarios: z.array(z.object({ scenario: z.string(), monthlyBurn: z.string(), runway: z.string() })),
   optimalPricePoint: z.object({ price: z.string(), reasoning: z.string() }),
-  notFound: z.array(z.string()).optional(),
+  notFound: z.array(z.string()).min(1).default(["No additional limitations identified"]),
 });
 export type Layer5 = z.infer<typeof layer5Schema>;
 
@@ -171,7 +171,7 @@ export const layer6Schema = z.object({
   futureTrends: z.array(z.object({ trend: z.string(), trigger: z.string(), timing: z.string() })),
   distributionLeverage: z.array(z.object({ lever: z.string(), description: z.string() })),
   revenueModelFit: z.array(z.object({ model: z.string(), fit: z.string(), reasoning: z.string().optional().default('') })),
-  notFound: z.array(z.string()).optional(),
+  notFound: z.array(z.string()).min(1).default(["No additional limitations identified"]),
 });
 export type Layer6 = z.infer<typeof layer6Schema>;
 
@@ -184,7 +184,7 @@ export const layer7Schema = z.object({
     implementation: z.string(),
     timeToEffect: z.string(),
   })),
-  notFound: z.array(z.string()).optional(),
+  notFound: z.array(z.string()).min(1).default(["No additional limitations identified"]),
 });
 export type Layer7 = z.infer<typeof layer7Schema>;
 
@@ -197,7 +197,7 @@ export const layer8Schema = z.object({
     confidence: confidenceLevel,
     sources: z.array(z.coerce.string()).optional().default([]),
   })),
-  notFound: z.array(z.string()).optional(),
+  notFound: z.array(z.string()).min(1).default(["No additional limitations identified"]),
 });
 export type Layer8 = z.infer<typeof layer8Schema>;
 

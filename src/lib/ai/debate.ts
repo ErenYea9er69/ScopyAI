@@ -16,11 +16,11 @@ import type { ResearchData } from '@/lib/research/orchestrator';
 function researchSummary(research: ResearchData): string {
   return [
     '--- MARKET DATA ---',
-    research.marketSize.slice(0, 3).join('\n'),
+    research.marketSize.slice(0, 5).join('\n'),
     '--- COMPETITOR DATA ---',
-    research.competitors.slice(0, 3).join('\n'),
+    research.competitors.slice(0, 5).join('\n'),
     '--- PAIN POINT DATA ---',
-    research.painPoints.slice(0, 3).join('\n'),
+    research.painPoints.slice(0, 5).join('\n'),
     '--- TREND DATA ---',
     research.trends.slice(0, 3).join('\n'),
     '--- REGULATORY DATA ---',
@@ -163,7 +163,8 @@ async function resolveDebate(
   niche: string,
   builder: { score: number; signal: string; reasoning: string; keyPoints: string[] },
   cynic: { score: number; signal: string; reasoning: string; keyPoints: string[] },
-  operator: { score: number; signal: string; reasoning: string; keyPoints: string[] }
+  operator: { score: number; signal: string; reasoning: string; keyPoints: string[] },
+  layerSummary: string = ''
 ) {
   const system = `
 You are the Debate Resolver. You have received verdicts from three independent AI agents
@@ -185,6 +186,8 @@ OUTPUT: Valid JSON exactly matching this structure (no markdown wrappers):
   const user = `
 NICHE: ${niche}
 
+${layerSummary}
+
 BUILDER AGENT (Opportunity):
 Score: ${builder.score}/100 — Signal: ${builder.signal}
 Reasoning: ${builder.reasoning}
@@ -200,7 +203,7 @@ Score: ${operator.score}/100 — Signal: ${operator.signal}
 Reasoning: ${operator.reasoning}
 Key Points: ${operator.keyPoints.join('; ')}
 
-Weigh all three perspectives. Produce the final conditional verdict and composite score.
+Weigh all three perspectives against the REPORT CLAIMS above. Produce the final conditional verdict and composite score.
 `.trim();
 
   return generateStructuredOutput(system, user, debateResultSchema, MODELS.REASONING);
@@ -226,7 +229,7 @@ export async function runTriAgentDebate(
   console.log(`[Debate] Builder=${builder.score} (${builder.signal}), Cynic=${cynic.score} (${cynic.signal}), Operator=${operator.score} (${operator.signal})`);
 
   // Resolve the debate
-  const resolved = await resolveDebate(niche, builder, cynic, operator);
+  const resolved = await resolveDebate(niche, builder, cynic, operator, layerSummary);
 
   return resolved;
 }

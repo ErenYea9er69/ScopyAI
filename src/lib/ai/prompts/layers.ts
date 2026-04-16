@@ -17,7 +17,26 @@ import type { Archetype } from '../router';
 
 function researchBlock(data: string[]): string {
   if (!data.length) return '[0 sources found — NO research data available for this section. You MUST mark all claims as confidence: "low" and list what is missing in notFound.]';
-  return `[${data.length} source(s) found]\n\n` + data.map((d, i) => `--- Source ${i + 1} ---\n${d}`).join('\n\n');
+  const truncated = truncateResearch(data);
+  return `[${truncated.length} of ${data.length} source(s) shown]\n\n` + truncated.map((d, i) => `--- Source ${i + 1} ---\n${d}`).join('\n\n');
+}
+
+/** Cap research data to prevent context window overflow. Keeps first N sources up to maxChars. */
+function truncateResearch(data: string[], maxChars: number = 12000): string[] {
+  const result: string[] = [];
+  let totalChars = 0;
+  for (const item of data) {
+    if (totalChars + item.length > maxChars && result.length > 0) break;
+    result.push(item);
+    totalChars += item.length;
+  }
+  return result;
+}
+
+/** Format research quality assessment as a header for prompts */
+function qualityHeader(summary: string): string {
+  if (!summary) return '';
+  return `\n⚠️ DATA QUALITY ASSESSMENT: ${summary}\n`;
 }
 
 const DATA_INTEGRITY_RULES = `
@@ -38,7 +57,13 @@ TONE RULES:
 
 // ========== LAYER 1 — AUDIENCE INTELLIGENCE ==========
 
-export function layer1Prompt(niche: string, geo: string, research: { painPoints: string[]; competitors: string[] }) {
+export function layer1Prompt(
+  niche: string,
+  geo: string,
+  research: { painPoints: string[]; competitors: string[] },
+  userContext?: { buyerType?: string; revenueModel?: string },
+  qualitySummary?: string
+) {
   const system = `
 You are the Audience Intelligence module of a world-class market analysis engine.
 Your job is to deliver a rigorous, citation-backed analysis of the target audience for a specific niche.
@@ -62,12 +87,16 @@ OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers)
   const user = `
 NICHE: ${niche}
 GEOGRAPHY: ${geo}
+BUYER TYPE: ${userContext?.buyerType || 'Not specified — infer from niche'}
+REVENUE MODEL: ${userContext?.revenueModel || 'Not specified — infer from niche'}
+${qualitySummary ? qualityHeader(qualitySummary) : ''}
 
 === RESEARCH DATA ===
 ${researchBlock([...research.painPoints, ...research.competitors])}
 
 Based on the above research, produce a comprehensive Layer 1 Audience Intelligence report.
 Include exact verbatim quotes from forums/reviews where available.
+IMPORTANT: If a buyer type is specified (e.g., Enterprise vs Consumer), build the avatar for THAT buyer type.
 For the shadow avatar, profile the lookalike customer who will NEVER buy.
 For payment threshold, estimate low/mid/high price anchors with reasoning.
 `.trim();
@@ -77,7 +106,13 @@ For payment threshold, estimate low/mid/high price anchors with reasoning.
 
 // ========== LAYER 2 — MARKET INTELLIGENCE ==========
 
-export function layer2Prompt(niche: string, geo: string, research: { marketSize: string[]; trends: string[] }) {
+export function layer2Prompt(
+  niche: string,
+  geo: string,
+  research: { marketSize: string[]; trends: string[] },
+  userContext?: { stage?: string; buyerType?: string },
+  qualitySummary?: string
+) {
   const system = `
 You are the Market Intelligence module. Provide TAM/SAM/SOM with confidence ranges (NOT single numbers),
 5-year trend trajectory, international opportunity, adjacent markets, timing verdict, and sentiment velocity.
@@ -101,11 +136,16 @@ OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers)
   const user = `
 NICHE: ${niche}
 GEOGRAPHY: ${geo}
+USER STAGE: ${userContext?.stage || 'Not specified'}
+BUYER TYPE: ${userContext?.buyerType || 'Not specified — infer from niche'}
+${qualitySummary ? qualityHeader(qualitySummary) : ''}
 
 === RESEARCH DATA ===
 ${researchBlock([...research.marketSize, ...research.trends])}
 
 Produce Layer 2 Market Intelligence. Use ranges not point estimates. Cite sources.
+IMPORTANT: If a buyer type is specified, calculate TAM/SAM/SOM for THAT segment specifically.
+If user stage is pre-MVP, focus SOM on validation-addressable market. If scaling, focus on growth ceiling.
 `.trim();
 
   return { system, user };
@@ -336,9 +376,9 @@ IMPORTANT:
 
 export function layer7Prompt(
   niche: string,
-  research: { competitors: string[] },
+  research: { competitors: string[]; painPoints: string[] },
   batch1Context: string = '',
-  userContext?: { stage?: string; budget?: string }
+  userContext?: { stage?: string; budget?: string; uniqueInsight?: string }
 ) {
   const system = `
 You are the Anti-Commoditisation module. For the given niche, generate 6 moat strategies:
@@ -362,14 +402,19 @@ OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers)
 NICHE: ${niche}
 USER STAGE: ${userContext?.stage || 'Not specified'}
 USER BUDGET: ${userContext?.budget || 'Not specified'}
+USER UNIQUE INSIGHT: ${userContext?.uniqueInsight || 'None'}
 
 ${batch1Context}
 
-=== RESEARCH DATA ===
+=== COMPETITOR DATA ===
 ${researchBlock(research.competitors)}
+
+=== AUDIENCE PAIN POINTS ===
+${researchBlock(research.painPoints)}
 
 IMPORTANT: Your moat strategies MUST account for the upstream risk data.
 If the market is saturated, focus on moats that create differentiation, not just scale.
+Build moats around the user's unique insight where possible — that's their natural edge.
 Order moats from most achievable (given user's stage and budget) to most aspirational.
 Be specific about HOW to build each moat for this exact niche.
 `.trim();

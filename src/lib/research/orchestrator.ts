@@ -113,7 +113,12 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
 
   const extractedCompetitorsContext = competitorExtractions
     .filter(Boolean)
-    .flatMap((ex: any) => ex?.results?.map((r: any) => r.rawContent || r.content) || []);
+    .flatMap((ex: any) => ex?.results?.map((r: any) => {
+      const url = r?.url || 'user-provided';
+      const title = r?.title || '';
+      const content = r?.rawContent || r?.content || '';
+      return `[SOURCE: ${url} | ${title}] ${content}`;
+    }) || []);
 
   // Helper: format a Tavily result with URL attribution
   const fmt = (r: any): string => {
