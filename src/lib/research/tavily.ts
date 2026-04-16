@@ -56,49 +56,52 @@ async function tavilySearch(query: string, options?: any) {
 
 export async function searchMarket(niche: string, geography: string) {
   const query = `${niche} market size TAM SAM growth rate 2024 2025 in ${geography}`;
-  const response = await tavilySearch(query, { includeAnswer: true, searchDepth: 'advanced', timeRange: 'year' });
+  const response = await tavilySearch(query, { includeAnswer: true, searchDepth: 'advanced', timeRange: 'year', topic: 'finance' });
   return { answer: response.answer, results: response.results };
 }
 
-export async function searchCompetitors(niche: string) {
-  const query = `top competitors pricing features for ${niche}`;
+export async function searchCompetitors(niche: string, geography?: string) {
+  const geoClause = geography ? ` in ${geography}` : '';
+  const query = `top competitors pricing features for ${niche}${geoClause}`;
   const response = await tavilySearch(query, { maxResults: 5 });
   return { results: response.results };
 }
 
-export async function searchPainPoints(niche: string, sources: string[]) {
-  // E.g., sources = ["reddit.com", "ycombinator.com", "trustpilot.com"]
+export async function searchPainPoints(niche: string, sources: string[], geography?: string) {
   const domains = sources.length > 0 ? sources : ["reddit.com", "quora.com", "trustpilot.com"];
-  const query = `biggest complaints pain points negative reviews "${niche}"`;
+  const geoClause = geography ? ` in ${geography}` : '';
+  const query = `biggest complaints pain points negative reviews "${niche}"${geoClause}`;
   
   const response = await tavilySearch(query, {
     includeDomains: domains,
     maxResults: 7,
-    searchDepth: 'advanced', // Advanced depth pulls deeper thread context from forums
+    searchDepth: 'advanced',
   });
   return { results: response.results };
 }
 
 export async function searchTrends(keywords: string) {
   const query = `${keywords} trend velocity sentiment analysis future outlook`;
-  const response = await tavilySearch(query, { includeAnswer: true, maxResults: 3, timeRange: 'year' });
+  const response = await tavilySearch(query, { includeAnswer: true, maxResults: 3, timeRange: 'year', topic: 'news' });
   return { answer: response.answer, results: response.results };
 }
 
 export async function searchRegulations(niche: string, geography: string) {
   const query = `${niche} legal regulations compliance risks in ${geography}`;
-  const response = await tavilySearch(query, { includeAnswer: true, maxResults: 3 });
+  const response = await tavilySearch(query, { includeAnswer: true, maxResults: 3, includeRawContent: 'markdown' });
   return { answer: response.answer, results: response.results };
 }
 
-export async function extractPage(url: string) {
+export async function extractPage(url: string, niche?: string) {
   trackTavilyUsage(1); // Extract costs credits too
   let clientIndex = Math.floor(Math.random() * tvlyClients.length);
   const maxAttempts = tvlyClients.length;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
-      return await tvlyClients[clientIndex].extract([url]);
+      return await tvlyClients[clientIndex].extract([url], {
+        ...(niche ? { query: `${niche} pricing features customers reviews` } : {}),
+      });
     } catch (error) {
       console.warn(`[Tavily Extract] Failed for ${url} using key index ${clientIndex}`);
       clientIndex = (clientIndex + 1) % tvlyClients.length;

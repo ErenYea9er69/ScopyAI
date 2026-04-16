@@ -128,6 +128,7 @@ export type Layer3 = z.infer<typeof layer3Schema>;
 // -- Layer 4: Competitor Intelligence --
 
 export const layer4Schema = z.object({
+  userCompetitorVerdict: z.string().optional(),
   competitors: z.array(z.object({
     name: z.string(),
     url: z.string().optional(),

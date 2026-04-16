@@ -20,6 +20,15 @@ export type ResearchData = {
   trends: string[];
   regulations: string[];
   sources: { url: string; title: string, confidence: 'high' | 'medium' | 'low' }[];
+  researchQuality: {
+    marketDataFound: boolean;
+    competitorDataFound: boolean;
+    painPointDataFound: boolean;
+    trendDataFound: boolean;
+    regulationDataFound: boolean;
+    totalSources: number;
+    summary: string;
+  };
 };
 
 /**
@@ -48,38 +57,88 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
 
   const [marketRes, compRes, painRes, trendRes, regRes, googleFallback] = await Promise.all([
     tavily.searchMarket(intake.niche, intake.geography),
-    tavily.searchCompetitors(intake.niche),
-    tavily.searchPainPoints(intake.niche, complaintDomains),
+    tavily.searchCompetitors(intake.niche, intake.geography),
+    tavily.searchPainPoints(intake.niche, complaintDomains, intake.geography),
     tavily.searchTrends(intake.niche),
     tavily.searchRegulations(intake.niche, intake.geography),
     serper.googleSearch(`${intake.niche} software solutions ${intake.geography}`) // Fallback/Supplemental
   ]);
 
+  // === CONDITIONAL RE-SEARCH: If first pass returned sparse data, try harder ===
+  let marketRes2: any = null;
+  let compRes2: any = null;
+  let painRes2: any = null;
+
+  const marketEmpty = !marketRes?.results?.length;
+  const compEmpty = !compRes?.results?.length;
+  const painEmpty = !painRes?.results?.length;
+
+  if (marketEmpty || compEmpty || painEmpty) {
+    console.log(`[Orchestrator] Sparse data detected (market=${!marketEmpty}, comp=${!compEmpty}, pain=${!painEmpty}). Firing re-search...`);
+
+    const reSearchPromises: Promise<any>[] = [];
+
+    if (marketEmpty) {
+      // Try alternative query formulations
+      reSearchPromises.push(
+        tavily.searchMarket(`${intake.niche} industry report revenue`, intake.geography)
+          .then(r => { marketRes2 = r; })
+      );
+    }
+    if (compEmpty) {
+      // Try without geography (broader search)
+      reSearchPromises.push(
+        tavily.searchCompetitors(intake.niche)
+          .then(r => { compRes2 = r; })
+      );
+    }
+    if (painEmpty) {
+      // Try broader complaint platforms
+      reSearchPromises.push(
+        tavily.searchPainPoints(intake.niche, ['reddit.com', 'producthunt.com', 'news.ycombinator.com', 'capterra.com'])
+          .then(r => { painRes2 = r; })
+      );
+    }
+
+    await Promise.all(reSearchPromises);
+    console.log(`[Orchestrator] Re-search complete. Market=${!!marketRes2}, Comp=${!!compRes2}, Pain=${!!painRes2}`);
+  }
+
   const competitorExtractions = await Promise.all(
-    (intake.competitorUrls || []).filter(u => u.trim()).map(url => tavily.extractPage(url))
+    (intake.competitorUrls || []).filter(u => u.trim()).map(url => tavily.extractPage(url, intake.niche))
   );
 
   const extractedCompetitorsContext = competitorExtractions
     .filter(Boolean)
     .flatMap((ex: any) => ex?.results?.map((r: any) => r.rawContent || r.content) || []);
 
-  // Aggregate Raw Strings (for LLM Context)
-  const marketSize = [marketRes?.answer, ...(marketRes?.results?.map((r: any) => r.content) || [])].filter(Boolean) as string[];
+  // Aggregate Raw Strings (merge first pass + re-search)
+  const marketSize = [
+    marketRes?.answer, ...(marketRes?.results?.map((r: any) => r.content) || []),
+    marketRes2?.answer, ...(marketRes2?.results?.map((r: any) => r.content) || []),
+  ].filter(Boolean) as string[];
   const competitors = [
     ...extractedCompetitorsContext,
-    [compRes?.results?.map((r: any) => r.content)].flat()
+    [compRes?.results?.map((r: any) => r.content)].flat(),
+    [compRes2?.results?.map((r: any) => r.content)].flat(),
   ].flat().filter(Boolean);
-  const painPoints = [painRes?.results?.map((r: any) => r.content)].flat().filter(Boolean);
+  const painPoints = [
+    painRes?.results?.map((r: any) => r.content),
+    painRes2?.results?.map((r: any) => r.content),
+  ].flat().filter(Boolean);
   const trends = [trendRes?.answer, ...(trendRes?.results?.map((r: any) => r.content) || [])].filter(Boolean) as string[];
   const regulations = [regRes?.answer, ...(regRes?.results?.map((r: any) => r.content) || [])].filter(Boolean) as string[];
 
-  // Merge and Deduplicate Source URLs
+  // Merge and Deduplicate Source URLs (including re-search results)
   const rawSources = [
     ...(marketRes?.results || []),
     ...(compRes?.results || []),
     ...(painRes?.results || []),
     ...(trendRes?.results || []),
     ...(regRes?.results || []),
+    ...(marketRes2?.results || []),
+    ...(compRes2?.results || []),
+    ...(painRes2?.results || []),
     ...(googleFallback || []).map((g: any) => ({ url: g.link, title: g.title, score: 0.5 }))
   ];
 
@@ -116,6 +175,26 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
   }
 
   console.log(`[Orchestrator] Captured ${finalizedSources.length} unique sources.`);
+
+  const researchQuality = {
+    marketDataFound: marketSize.length > 0,
+    competitorDataFound: competitors.length > 0,
+    painPointDataFound: painPoints.length > 0,
+    trendDataFound: trends.length > 0,
+    regulationDataFound: regulations.length > 0,
+    totalSources: finalizedSources.length,
+    summary: [
+      `Market: ${marketSize.length} sources`,
+      `Competitors: ${competitors.length} sources`,
+      `Pain Points: ${painPoints.length} sources`,
+      `Trends: ${trends.length} sources`,
+      `Regulations: ${regulations.length} sources`,
+      `Total unique sources: ${finalizedSources.length}`,
+      finalizedSources.length < 5 ? '⚠️ LOW DATA QUALITY — results may be unreliable for this geography/niche' : '',
+    ].filter(Boolean).join(' | '),
+  };
+
+  console.log(`[Orchestrator] Research quality: ${researchQuality.summary}`);
   
   return {
     marketSize,
@@ -123,6 +202,7 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
     painPoints,
     trends,
     regulations,
-    sources: finalizedSources
+    sources: finalizedSources,
+    researchQuality,
   };
 }

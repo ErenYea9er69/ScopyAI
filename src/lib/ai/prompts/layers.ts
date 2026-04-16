@@ -16,9 +16,18 @@ import type { Archetype } from '../router';
 // -- helpers --
 
 function researchBlock(data: string[]): string {
-  if (!data.length) return 'No research data available for this section.';
-  return data.map((d, i) => `[Source ${i + 1}]: ${d}`).join('\n\n');
+  if (!data.length) return '[0 sources found — NO research data available for this section. You MUST mark all claims as confidence: "low" and list what is missing in notFound.]';
+  return `[${data.length} source(s) found]\n\n` + data.map((d, i) => `[Source ${i + 1}]: ${d}`).join('\n\n');
 }
+
+const DATA_INTEGRITY_RULES = `
+DATA INTEGRITY RULES — YOU MUST FOLLOW THESE:
+1. If the research data section says "0 sources found" or is empty, you MUST NOT invent statistics, company names, revenue figures, or market sizes. Instead, set confidence to "low" and add a description of what data was missing to the "notFound" array.
+2. Every numerical claim (market size, revenue, growth rate, score) MUST be backed by a source from the research data. If no source exists, use a range estimate and mark confidence as "low".
+3. If the user's geography is a developing or niche market where English web data is scarce, explicitly state "Limited data available for this geography" rather than extrapolating from US/EU data.
+4. The "notFound" array must NEVER be empty — always list at least one limitation of your analysis.
+5. It is ALWAYS better to say "Insufficient data to estimate" than to fabricate a number.
+`.trim();
 
 // ========== LAYER 1 — AUDIENCE INTELLIGENCE ==========
 
@@ -26,6 +35,8 @@ export function layer1Prompt(niche: string, geo: string, research: { painPoints:
   const system = `
 You are the Audience Intelligence module of a world-class market analysis engine.
 Your job is to deliver a rigorous, citation-backed analysis of the target audience for a specific niche.
+
+${DATA_INTEGRITY_RULES}
 
 OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers).
 {
@@ -63,6 +74,8 @@ export function layer2Prompt(niche: string, geo: string, research: { marketSize:
   const system = `
 You are the Market Intelligence module. Provide TAM/SAM/SOM with confidence ranges (NOT single numbers),
 5-year trend trajectory, international opportunity, adjacent markets, timing verdict, and sentiment velocity.
+
+${DATA_INTEGRITY_RULES}
 
 OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers).
 {
@@ -105,6 +118,8 @@ Your job is to identify every threat that could kill this idea.
 Name specific AI models, specific platforms, specific competitors.
 Cross-reference the user's budget and skills against execution difficulty.
 
+${DATA_INTEGRITY_RULES}
+
 OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers).
 {
   "dyingTrendSignals": [ { "claim": "string", "source": "string", "confidence": "high|medium|low" } ],
@@ -139,13 +154,21 @@ Score saturation 0-100. Score execution difficulty 0-100 against this specific u
 
 // ========== LAYER 4 — COMPETITOR INTELLIGENCE ==========
 
-export function layer4Prompt(niche: string, research: { competitors: string[] }) {
+export function layer4Prompt(niche: string, research: { competitors: string[] }, userUrls: string[] = []) {
   const system = `
 You are the Competitor Intelligence module. Produce deep profiles of the top competitors,
 identify market gaps, SEO white space, pricing spectrum, substitute threats, and competitor velocity.
 
+The user has explicitly provided some URLs they believe are competitors. YOU MUST:
+1. Verify if these are actually direct competitors, indirect substitutes, or entirely irrelevant (e.g. software vs agencies).
+2. Start your response with a concise "userCompetitorVerdict" evaluating their assumed competitors against the real market reality you found.
+3. Then proceed with the true top competitors in your "competitors" array.
+
+${DATA_INTEGRITY_RULES}
+
 OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers).
 {
+  "userCompetitorVerdict": "string",
   "competitors": [ { "name": "string", "url": "string", "estimatedRevenue": "string", "traffic": "string", "pricing": "string", "strengths": ["string"], "weaknesses": ["string"] } ],
   "marketGaps": [ { "claim": "string", "source": "string", "confidence": "high|medium|low" } ],
   "seoWhiteSpace": [ { "keyword": "string", "difficulty": "string", "opportunity": "string" } ],
@@ -158,6 +181,7 @@ OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers)
 
   const user = `
 NICHE: ${niche}
+USER-PROVIDED COMPETITORS: ${userUrls.length > 0 ? userUrls.join(', ') : 'None provided'}
 
 === RESEARCH DATA ===
 ${researchBlock(research.competitors)}
@@ -173,11 +197,14 @@ Name real companies. Estimate real revenue ranges. Identify real weaknesses.
 export function layer5Prompt(
   niche: string,
   research: { marketSize: string[]; competitors: string[] },
-  userContext: { budget: string; time: string }
+  userContext: { budget: string; time: string; revenueModel?: string; buyerType?: string },
+  batch1Context: string = ''
 ) {
   const system = `
 You are the Unit Economics module. Calculate CAC benchmarks, LTV estimates, LTV:CAC verdict,
 break-even timeline, burn rate scenarios using the user's actual budget, and optimal price point.
+
+${DATA_INTEGRITY_RULES}
 
 OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers).
 {
@@ -195,11 +222,18 @@ OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers)
 NICHE: ${niche}
 USER BUDGET: ${userContext.budget}
 USER TIME: ${userContext.time}
+REVENUE MODEL: ${userContext.revenueModel || 'Not specified — infer from niche'}
+BUYER TYPE: ${userContext.buyerType || 'Not specified — infer from niche'}
+
+${batch1Context}
 
 === RESEARCH DATA ===
 ${researchBlock([...research.marketSize, ...research.competitors])}
 
-Use the user's actual budget for burn rate scenarios. Be specific about assumptions.
+IMPORTANT: Your unit economics MUST be consistent with the upstream market data above.
+If upstream says the market is saturated or declining, your CAC estimates should reflect higher acquisition costs.
+If the user specified a revenue model, calculate economics for THAT model specifically.
+If the user specified a buyer type (e.g., Enterprise vs Consumer), adjust CAC/LTV accordingly — Enterprise CAC is 10-100x consumer.
 `.trim();
 
   return { system, user };
@@ -211,12 +245,21 @@ export function layer6Prompt(
   niche: string,
   geo: string,
   research: { marketSize: string[]; competitors: string[]; painPoints: string[] },
-  userContext: { budget: string; time: string; assets: string[] }
+  userContext: { budget: string; time: string; assets: string[]; acquisitionChannel?: string; revenueModel?: string; buyerType?: string },
+  batch1Context: string = ''
 ) {
   const system = `
 You are the Offer & GTM module. Generate concrete offer ideas with pricing logic,
 a week-by-week GTM plan, platform-specific hooks, channel map with decay signals,
 validation roadmap with costs, future trends, distribution leverage, and revenue model fit.
+
+${DATA_INTEGRITY_RULES}
+
+GEOGRAPHY-AWARE RULES:
+- Tailor ALL channel recommendations to platforms actually used in ${geo}.
+- If the market speaks a non-English language, note this and adjust channel strategy accordingly.
+- Do NOT recommend channels that don't work in the target geography (e.g., "Reddit" for Tunisia, "Yelp" for Japan).
+- Consider local payment methods, social platforms, and cultural buying behavior.
 
 OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers).
 {
@@ -238,12 +281,21 @@ GEOGRAPHY: ${geo}
 USER BUDGET: ${userContext.budget}
 USER TIME: ${userContext.time}
 USER ASSETS: ${userContext.assets.join(', ') || 'None specified'}
+PREFERRED ACQUISITION CHANNEL: ${userContext.acquisitionChannel || 'Not specified — recommend the best channel for this niche'}
+PREFERRED REVENUE MODEL: ${userContext.revenueModel || 'Not specified — recommend the best model'}
+BUYER TYPE: ${userContext.buyerType || 'Not specified — infer from niche'}
+
+${batch1Context}
 
 === RESEARCH DATA ===
 ${researchBlock([...research.marketSize, ...research.competitors, ...research.painPoints])}
 
-GTM plan should be personalised to the user's budget and time commitment.
-Include specific costs for each validation step.
+IMPORTANT:
+- Your GTM plan MUST be consistent with the upstream market and risk data above.
+- If the market is saturated (per upstream), your GTM should focus on differentiation, not volume.
+- Align channel recommendations to the user's budget — don't recommend paid ads to a bootstrapped user.
+- If the user specified an acquisition channel, build the GTM plan around THAT channel primarily.
+- GTM costs must reference the user's actual budget. Don't suggest $5k ad spend for someone with $500.
 `.trim();
 
   return { system, user };
@@ -251,11 +303,13 @@ Include specific costs for each validation step.
 
 // ========== LAYER 7 — ANTI-COMMODITISATION (MOAT) ==========
 
-export function layer7Prompt(niche: string, research: { competitors: string[] }) {
+export function layer7Prompt(niche: string, research: { competitors: string[] }, batch1Context: string = '') {
   const system = `
 You are the Anti-Commoditisation module. For the given niche, generate 6 moat strategies:
 data advantage, workflow deep-integration, network effect, regulatory moat,
 community moat, and switching cost architecture.
+
+${DATA_INTEGRITY_RULES}
 
 Each moat must include: type, strategy, implementation steps, and time to effect.
 
@@ -269,9 +323,13 @@ OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers)
   const user = `
 NICHE: ${niche}
 
+${batch1Context}
+
 === RESEARCH DATA ===
 ${researchBlock(research.competitors)}
 
+IMPORTANT: Your moat strategies MUST account for the upstream risk data.
+If the market is saturated, focus on moats that create differentiation, not just scale.
 Be specific about HOW to build each moat for this exact niche.
 `.trim();
 
@@ -327,6 +385,8 @@ export function layer8Prompt(
 
   const system = `
 You are the Persona-Specific Intelligence module. The user has been classified as a "${archetype}" archetype.
+
+${DATA_INTEGRITY_RULES}
 Generate the following 5 specialised modules tailored to their archetype:
 ${modules.map((m, i) => `${i + 1}. ${m}`).join('\n')}
 

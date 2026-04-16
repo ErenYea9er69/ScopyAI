@@ -11,6 +11,11 @@ export const intakeSchema = z.object({
   complaintPlatforms: z.array(z.string()).default([]),
   founderFit: z.array(z.string()).default([]),
   goalTimeline: z.string().default(''),
+  uniqueInsight: z.string().default(''),
+  acquisitionChannel: z.string().default(''),
+  buyerType: z.string().default(''),
+  revenueModel: z.string().default(''),
+  whyNow: z.string().default(''),
 });
 
 export type IntakeInput = z.infer<typeof intakeSchema>;

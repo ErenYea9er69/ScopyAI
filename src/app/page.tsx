@@ -2,7 +2,7 @@ import { Navbar } from "@/components/landing/Navbar";
 import { Hero } from "@/components/landing/Hero";
 import { SocialProof } from "@/components/landing/SocialProof";
 import { Shield } from "@/components/landing/Shield";
-import { IntakeWizard } from "@/components/intake/IntakeWizard";
+import { WizardContainer } from "@/components/intake/WizardContainer";
 import { Footer } from "@/components/landing/Footer";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -54,7 +54,7 @@ export default function LandingPage() {
           <div className="flex-1 h-px bg-border"></div>
         </div>
         
-        <IntakeWizard />
+        <WizardContainer />
         <ModuleGrids />
         <RiskRadar />
         

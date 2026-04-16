@@ -45,6 +45,11 @@ export type IntakeData = {
   complaintPlatforms: string[];
   founderFit: string[];
   goalTimeline: string;
+  uniqueInsight: string;
+  acquisitionChannel: string;
+  buyerType: string;
+  revenueModel: string;
+  whyNow: string;
 };
 
 type ProgressCallback = (update: {
@@ -107,6 +112,11 @@ export async function generateReport(
       stage: intake.stage,
       founderFit: intake.founderFit,
       timeline: intake.goalTimeline,
+      uniqueInsight: intake.uniqueInsight,
+      acquisitionChannel: intake.acquisitionChannel,
+      buyerType: intake.buyerType,
+      revenueModel: intake.revenueModel,
+      whyNow: intake.whyNow,
     };
 
     // --- Batch 1: Layers 1, 2, 3 (parallel) ---
@@ -129,22 +139,26 @@ export async function generateReport(
     if (l2.status === 'fulfilled') report.layers.layer2 = l2.value;
     if (l3.status === 'fulfilled') report.layers.layer3 = l3.value;
 
-    // --- Batch 2: Layers 4, 5, 6, 7 (parallel) ---
+    // --- Layer Cross-Pollination: Build context from Batch 1 for Batch 2 ---
+    const batch1Context = buildBatch1Summary(report.layers);
+    console.log(`[Generator] Batch 1 cross-pollination context: ${batch1Context.length} chars`);
+
+    // --- Batch 2: Layers 4, 5, 6, 7 (parallel, with Batch 1 context) ---
     const [l4, l5, l6, l7] = await Promise.allSettled([
       runLayer('layer4', () => {
-        const p = layer4Prompt(intake.niche, research);
+        const p = layer4Prompt(intake.niche, research, intake.competitorUrls);
         return generateStructuredOutput(p.system, p.user, layer4Schema, MODELS.REASONING);
       }, onProgress),
       runLayer('layer5', () => {
-        const p = layer5Prompt(intake.niche, research, userContext);
+        const p = layer5Prompt(intake.niche, research, userContext, batch1Context);
         return generateStructuredOutput(p.system, p.user, layer5Schema, MODELS.REASONING);
       }, onProgress),
       runLayer('layer6', () => {
-        const p = layer6Prompt(intake.niche, intake.geography, research, userContext);
+        const p = layer6Prompt(intake.niche, intake.geography, research, userContext, batch1Context);
         return generateStructuredOutput(p.system, p.user, layer6Schema, MODELS.REASONING);
       }, onProgress),
       runLayer('layer7', () => {
-        const p = layer7Prompt(intake.niche, research);
+        const p = layer7Prompt(intake.niche, research, batch1Context);
         return generateStructuredOutput(p.system, p.user, layer7Schema, MODELS.REASONING);
       }, onProgress),
     ]);
@@ -227,3 +241,38 @@ async function runLayer<T>(
     throw err; // Re-throw so Promise.allSettled captures it
   }
 }
+
+/**
+ * Builds a condensed summary of Batch 1 layers (1, 2, 3) for cross-pollination
+ * into Batch 2 layers (5, 6, 7). This ensures downstream layers don't contradict
+ * upstream findings.
+ */
+function buildBatch1Summary(layers: FullReport['layers']): string {
+  const parts: string[] = ['=== UPSTREAM INTELLIGENCE (from Layers 1-3) ==='];
+
+  if (layers.layer1) {
+    const l1 = layers.layer1;
+    parts.push(`[AUDIENCE] Top pain points: ${l1.painPoints?.slice(0, 3).map(p => p.pain).join('; ') || 'Unknown'}`);
+    parts.push(`[AUDIENCE] Payment threshold: ${l1.paymentThreshold?.low || '?'} – ${l1.paymentThreshold?.high || '?'}`);
+    parts.push(`[AUDIENCE] Shadow avatar: ${l1.shadowAvatar?.description || 'Not identified'}`);
+  }
+
+  if (layers.layer2) {
+    const l2 = layers.layer2;
+    parts.push(`[MARKET] TAM: ${l2.tam?.range || 'Unknown'} (confidence: ${l2.tam?.confidence || 'low'})`);
+    parts.push(`[MARKET] Trend: ${l2.trendTrajectory?.direction || 'Unknown'} — ${l2.trendTrajectory?.searchVolumeTrend || ''}`);
+    parts.push(`[MARKET] Timing verdict: ${l2.marketTimingVerdict || 'Unknown'}`);
+    parts.push(`[MARKET] Sentiment: ${l2.sentimentVelocity?.overall || 'Unknown'}`);
+  }
+
+  if (layers.layer3) {
+    const l3 = layers.layer3;
+    parts.push(`[RISK] Saturation: ${l3.saturationScore?.percentage || 0}% — ${l3.saturationScore?.reasoning || ''}`);
+    parts.push(`[RISK] AI disruption: ${l3.aiDisruptionRisk?.score || 0}/10 — ${l3.aiDisruptionRisk?.threateningModel || 'None identified'}`);
+    parts.push(`[RISK] Execution difficulty: ${l3.executionDifficulty?.score || 0}/100`);
+    parts.push(`[RISK] Gorilla competitors: ${l3.gorillaCompetitors?.map(g => g.name).join(', ') || 'None identified'}`);
+  }
+
+  return parts.join('\n');
+}
+
