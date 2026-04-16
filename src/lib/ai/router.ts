@@ -28,6 +28,8 @@ export async function routePersona(intakeData: {
   budget: string;
   time: string;
   stage: string;
+  revenueModel?: string;
+  buyerType?: string;
 }): Promise<PersonaConfig> {
   
   const systemPrompt = `

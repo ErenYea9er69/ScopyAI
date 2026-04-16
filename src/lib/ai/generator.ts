@@ -96,6 +96,8 @@ export async function generateReport(
       budget: intake.budget,
       time: intake.timeCommitment,
       stage: intake.stage,
+      revenueModel: intake.revenueModel,
+      buyerType: intake.buyerType,
     });
     report.persona = persona.archetype;
 
@@ -126,11 +128,11 @@ export async function generateReport(
         return generateStructuredOutput(p.system, p.user, layer1Schema, MODELS.REASONING);
       }, onProgress),
       runLayer('layer2', () => {
-        const p = layer2Prompt(intake.niche, intake.geography, research, { stage: userContext.stage, buyerType: userContext.buyerType }, research.researchQuality.summary);
+        const p = layer2Prompt(intake.niche, intake.geography, research, { stage: userContext.stage, buyerType: userContext.buyerType, whyNow: userContext.whyNow }, research.researchQuality.summary);
         return generateStructuredOutput(p.system, p.user, layer2Schema, MODELS.REASONING);
       }, onProgress),
       runLayer('layer3', () => {
-        const p = layer3Prompt(intake.niche, intake.geography, research, userContext);
+        const p = layer3Prompt(intake.niche, intake.geography, research, { ...userContext, whyNow: userContext.whyNow });
         return generateStructuredOutput(p.system, p.user, layer3Schema, MODELS.REASONING);
       }, onProgress),
     ]);
@@ -150,11 +152,11 @@ export async function generateReport(
         return generateStructuredOutput(p.system, p.user, layer4Schema, MODELS.REASONING);
       }, onProgress),
       runLayer('layer5', () => {
-        const p = layer5Prompt(intake.niche, research, userContext, batch1Context);
+        const p = layer5Prompt(intake.niche, research, { ...userContext, goalTimeline: userContext.timeline }, batch1Context);
         return generateStructuredOutput(p.system, p.user, layer5Schema, MODELS.REASONING);
       }, onProgress),
       runLayer('layer6', () => {
-        const p = layer6Prompt(intake.niche, intake.geography, research, userContext, batch1Context);
+        const p = layer6Prompt(intake.niche, intake.geography, research, { ...userContext, goalTimeline: userContext.timeline }, batch1Context);
         return generateStructuredOutput(p.system, p.user, layer6Schema, MODELS.REASONING);
       }, onProgress),
       runLayer('layer7', () => {
@@ -187,6 +189,10 @@ export async function generateReport(
       const layerSummary = buildLayerSummary(report.layers);
       report.debate = await runTriAgentDebate(intake.niche, research, userContext, layerSummary);
       onProgress?.({ step: 'debate', status: 'complete' });
+
+      // ===== STEP 5b: Reconcile Report Based on Debate =====
+      reconcileReport(report);
+
     } catch (err) {
       console.error('[Generator] Debate failed:', err);
       onProgress?.({ step: 'debate', status: 'failed' });
@@ -195,8 +201,11 @@ export async function generateReport(
     // ===== STEP 6: Auto-Pivot (conditional) =====
     const saturation = report.layers.layer3?.saturationScore?.percentage ?? 0;
     const cynicScore = report.debate?.cynic?.score ?? 0;
+    const cynicSignal = report.debate?.cynic?.signal ?? '';
+    const layer3Failed = !report.layers.layer3;
 
-    if (shouldTriggerPivot(saturation, cynicScore)) {
+    // Pivot triggers if: high saturation OR high cynic score OR cynic says KILL OR layer3 crashed with high cynic
+    if (shouldTriggerPivot(saturation, cynicScore) || cynicSignal.toUpperCase().includes('KILL') || (layer3Failed && cynicScore > 60)) {
       onProgress?.({ step: 'pivot', status: 'started' });
       console.log('[Generator] Step 6: Auto-Pivot triggered!');
 
@@ -206,7 +215,8 @@ export async function generateReport(
           saturation,
           cynicScore,
           research,
-          userContext
+          userContext,
+          intake.geography
         );
         onProgress?.({ step: 'pivot', status: 'complete' });
       } catch (err) {
@@ -260,6 +270,8 @@ function buildBatch1Summary(layers: FullReport['layers']): string {
     parts.push(`[AUDIENCE] Top pain points: ${l1.painPoints?.slice(0, 3).map(p => p.pain).join('; ') || 'Unknown'}`);
     parts.push(`[AUDIENCE] Payment threshold: ${l1.paymentThreshold?.low || '?'} – ${l1.paymentThreshold?.high || '?'}`);
     parts.push(`[AUDIENCE] Shadow avatar: ${l1.shadowAvatar?.description || 'Not identified'}`);
+  } else {
+    parts.push(`[AUDIENCE] ⚠️ Layer 1 FAILED — no audience data available. Treat all audience-dependent claims as confidence: "low".`);
   }
 
   if (layers.layer2) {
@@ -268,6 +280,8 @@ function buildBatch1Summary(layers: FullReport['layers']): string {
     parts.push(`[MARKET] Trend: ${l2.trendTrajectory?.direction || 'Unknown'} — ${l2.trendTrajectory?.searchVolumeTrend || ''}`);
     parts.push(`[MARKET] Timing verdict: ${l2.marketTimingVerdict || 'Unknown'}`);
     parts.push(`[MARKET] Sentiment: ${l2.sentimentVelocity?.overall || 'Unknown'}`);
+  } else {
+    parts.push(`[MARKET] ⚠️ Layer 2 FAILED — no market data available. Do NOT invent TAM/SAM numbers. Treat all market-dependent claims as confidence: "low".`);
   }
 
   if (layers.layer3) {
@@ -276,6 +290,8 @@ function buildBatch1Summary(layers: FullReport['layers']): string {
     parts.push(`[RISK] AI disruption: ${l3.aiDisruptionRisk?.score || 0}/10 — ${l3.aiDisruptionRisk?.threateningModel || 'None identified'}`);
     parts.push(`[RISK] Execution difficulty: ${l3.executionDifficulty?.score || 0}/100`);
     parts.push(`[RISK] Gorilla competitors: ${l3.gorillaCompetitors?.map(g => g.name).join(', ') || 'None identified'}`);
+  } else {
+    parts.push(`[RISK] ⚠️ Layer 3 FAILED — no risk data available. Assume HIGH risk as a precaution.`);
   }
 
   return parts.join('\n');
@@ -359,4 +375,77 @@ function buildLayerSummary(layers: FullReport['layers']): string {
   }
 
   return parts.join('\n');
+}
+
+/**
+ * Reconciles report layers based on debate results.
+ * If the debate flagged significant issues, this function physically
+ * annotates the layer outputs so the user sees consistent information.
+ */
+function reconcileReport(report: FullReport): void {
+  if (!report.debate) return;
+
+  const { cynic, builder, compositeScore } = report.debate;
+  const cynicHigh = cynic.score > 70;
+  const builderLow = builder.score < 50;
+  const isHighRisk = cynicHigh && builderLow;
+  const isNonViable = compositeScore < 30;
+
+  console.log(`[Reconciler] Cynic=${cynic.score}, Builder=${builder.score}, Composite=${compositeScore}, HighRisk=${isHighRisk}, NonViable=${isNonViable}`);
+
+  if (!isHighRisk && !isNonViable) return; // No reconciliation needed
+
+  // Helper: downgrade confidence fields in an object tree
+  const downgradeConfidence = (obj: any): void => {
+    if (!obj || typeof obj !== 'object') return;
+    if (Array.isArray(obj)) {
+      obj.forEach(downgradeConfidence);
+      return;
+    }
+    for (const key of Object.keys(obj)) {
+      if (key === 'confidence' && (obj[key] === 'high' || obj[key] === 'medium')) {
+        obj[key] = 'low';
+      } else if (typeof obj[key] === 'object') {
+        downgradeConfidence(obj[key]);
+      }
+    }
+  };
+
+  // Helper: append warnings to a layer's notFound array
+  const appendWarnings = (layer: any, warnings: string[]): void => {
+    if (!layer) return;
+    if (!layer.notFound) layer.notFound = [];
+    for (const w of warnings) {
+      if (!layer.notFound.includes(w)) {
+        layer.notFound.push(w);
+      }
+    }
+  };
+
+  const warnings: string[] = [];
+
+  if (isHighRisk) {
+    warnings.push(`⚠️ HIGH RISK: Cynic scored ${cynic.score}/100 vs Builder ${builder.score}/100. Key concerns: ${cynic.keyPoints.slice(0, 2).join('; ')}`);
+  }
+
+  if (isNonViable) {
+    warnings.push(`🚫 NON-VIABLE: Composite debate score ${compositeScore}/100. This niche was flagged as non-viable by the adversarial risk system.`);
+  }
+
+  // Apply to all layers
+  const layers = report.layers;
+  for (const layerKey of Object.keys(layers) as (keyof typeof layers)[]) {
+    const layer = layers[layerKey];
+    if (!layer) continue;
+
+    // Downgrade confidence on high-risk reports
+    if (isHighRisk) {
+      downgradeConfidence(layer);
+    }
+
+    // Append debate warnings to notFound
+    appendWarnings(layer, warnings);
+  }
+
+  console.log(`[Reconciler] Applied ${warnings.length} warnings to ${Object.keys(layers).length} layers.`);
 }

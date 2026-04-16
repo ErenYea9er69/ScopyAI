@@ -34,7 +34,8 @@ export async function runAutoPivot(
     acquisitionChannel?: string;
     revenueModel?: string;
     whyNow?: string;
-  }
+  },
+  geography: string = 'Global'
 ): Promise<AutoPivotResult> {
   if (!shouldTriggerPivot(saturation, cynicScore)) {
     return {
@@ -56,7 +57,7 @@ Pivot C (High Friction): Highest potential but requires significantly more resou
 
 Each pivot must include:
 - rank ("A", "B", "C")
-- title (the pivot niche/idea)
+- title (the pivot niche/idea — MUST be 2-5 words, e.g. "AI Nutrition Coaching", NOT a full sentence)
 - description (why this pivot works)
 - newSaturation (estimated %, must be lower than original)
 - executionFit ("Easy", "Moderate", "Hard", or "Impossible" for THIS user)
@@ -119,17 +120,18 @@ Use the user's unique insight and founder fit to find pivots where they have an 
       result.pivots.map(async (pivot) => {
         try {
           const [marketRes, compRes] = await Promise.all([
-            searchMarket(pivot.title, 'Global'),
-            searchCompetitors(pivot.title),
+            searchMarket(pivot.title, geography),
+            searchCompetitors(pivot.title, geography),
           ]);
 
+          const maxResults = 7; // Tavily's max per query
           const sourceCount = (marketRes?.results?.length || 0) + (compRes?.results?.length || 0);
           const hasRealData = sourceCount > 2;
 
-          // Adjust saturation based on real competitor data
+          // Bounded formula: accounts for Tavily's maxResults cap
           const realCompetitorCount = compRes?.results?.length || 0;
           const adjustedSaturation = hasRealData
-            ? Math.min(100, Math.max(5, realCompetitorCount * 12)) // Rough heuristic: more competitors = higher saturation
+            ? Math.min(95, Math.max(10, Math.round((realCompetitorCount / maxResults) * 85 + 10)))
             : pivot.newSaturation; // Keep LLM estimate if no data
 
           return {

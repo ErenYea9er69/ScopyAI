@@ -53,6 +53,11 @@ TONE RULES:
 - Write in a direct, analytical tone. Be blunt. Be specific.
 - No filler phrases: "In today's rapidly evolving landscape", "It's worth noting that", "There is a growing consensus".
 - Every sentence must contain a concrete claim, number, or actionable insight. Cut the corporate fluff.
+
+LANGUAGE RULES:
+- ALL analysis text MUST be output in English, regardless of the geography or research language.
+- If research quotes are in another language (French, Arabic, etc.), provide both the original quote AND an English translation.
+- Do NOT switch output language based on geography. The JSON schema is always English.
 `.trim();
 
 // ========== LAYER 1 — AUDIENCE INTELLIGENCE ==========
@@ -110,7 +115,7 @@ export function layer2Prompt(
   niche: string,
   geo: string,
   research: { marketSize: string[]; trends: string[] },
-  userContext?: { stage?: string; buyerType?: string },
+  userContext?: { stage?: string; buyerType?: string; whyNow?: string },
   qualitySummary?: string
 ) {
   const system = `
@@ -138,6 +143,7 @@ NICHE: ${niche}
 GEOGRAPHY: ${geo}
 USER STAGE: ${userContext?.stage || 'Not specified'}
 BUYER TYPE: ${userContext?.buyerType || 'Not specified — infer from niche'}
+WHY NOW: ${userContext?.whyNow || 'Not specified'}
 ${qualitySummary ? qualityHeader(qualitySummary) : ''}
 
 === RESEARCH DATA ===
@@ -145,6 +151,7 @@ ${researchBlock([...research.marketSize, ...research.trends])}
 
 Produce Layer 2 Market Intelligence. Use ranges not point estimates. Cite sources.
 IMPORTANT: If a buyer type is specified, calculate TAM/SAM/SOM for THAT segment specifically.
+If the user provided a "WHY NOW" signal, factor it into your market timing verdict — it may indicate a regulatory change, competitor exit, or technology shift that affects timing.
 If user stage is pre-MVP, focus SOM on validation-addressable market. If scaling, focus on growth ceiling.
 `.trim();
 
@@ -157,7 +164,7 @@ export function layer3Prompt(
   niche: string,
   geo: string,
   research: { trends: string[]; regulations: string[]; competitors: string[] },
-  userContext: { budget: string; time: string; assets: string[]; founderFit?: string[] }
+  userContext: { budget: string; time: string; assets: string[]; founderFit?: string[]; whyNow?: string }
 ) {
   const system = `
 You are the Survival Intelligence module — the adversarial risk detector.
@@ -188,12 +195,19 @@ USER BUDGET: ${userContext.budget}
 USER TIME: ${userContext.time}
 USER ASSETS: ${userContext.assets.join(', ') || 'None specified'}
 USER FOUNDER FIT: ${userContext.founderFit?.join(', ') || 'None specified'}
+WHY NOW: ${userContext.whyNow || 'Not specified'}
 
 === RESEARCH DATA ===
 ${researchBlock([...research.trends, ...research.regulations, ...research.competitors])}
 
 Be ruthlessly honest. Name the specific AI model that threatens this niche.
 Score saturation 0-100. Score execution difficulty 0-100 against this specific user's resources.
+If the user provided a "WHY NOW" signal, cross-reference it against regulatory timelines and competitive shifts.
+
+FOUNDER FIT WEIGHTING:
+- If the user checked 4+ founder-fit statements, reduce executionDifficulty score by 15-20 points (they have strong leverage).
+- If the user checked 0-1 statements, increase executionDifficulty score by 10 points (low founder-market fit).
+- Factor specific fit statements: "domain expertise" reduces research costs, "technical advantage" reduces build costs, "experienced pain point" increases conviction.
 `.trim();
 
   return { system, user };
@@ -251,7 +265,7 @@ IMPORTANT:
 export function layer5Prompt(
   niche: string,
   research: { marketSize: string[]; competitors: string[]; unitEconomics: string[] },
-  userContext: { budget: string; time: string; revenueModel?: string; buyerType?: string },
+  userContext: { budget: string; time: string; revenueModel?: string; buyerType?: string; goalTimeline?: string },
   batch1Context: string = ''
 ) {
   const system = `
@@ -283,6 +297,7 @@ USER BUDGET: ${userContext.budget}
 USER TIME: ${userContext.time}
 REVENUE MODEL: ${userContext.revenueModel || 'Not specified — infer from niche'}
 BUYER TYPE: ${userContext.buyerType || 'Not specified — infer from niche'}
+GOAL TIMELINE: ${userContext.goalTimeline || 'Not specified'}
 
 ${batch1Context}
 
@@ -296,6 +311,7 @@ IMPORTANT: Your unit economics MUST be consistent with the upstream market data 
 If upstream says the market is saturated or declining, your CAC estimates should reflect higher acquisition costs.
 If the user specified a revenue model, calculate economics for THAT model specifically.
 If the user specified a buyer type (e.g., Enterprise vs Consumer), adjust CAC/LTV accordingly — Enterprise CAC is 10-100x consumer.
+If the user specified a goal timeline, the break-even analysis MUST factor it — a "Revenue in 30 days" user needs a fundamentally different burn rate scenario than a "Revenue in 12 months" user.
 `.trim();
 
   return { system, user };
@@ -307,7 +323,7 @@ export function layer6Prompt(
   niche: string,
   geo: string,
   research: { marketSize: string[]; competitors: string[]; painPoints: string[]; trends: string[] },
-  userContext: { budget: string; time: string; assets: string[]; acquisitionChannel?: string; revenueModel?: string; buyerType?: string },
+  userContext: { budget: string; time: string; assets: string[]; acquisitionChannel?: string; revenueModel?: string; buyerType?: string; goalTimeline?: string },
   batch1Context: string = ''
 ) {
   const system = `
@@ -335,7 +351,7 @@ OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers)
   "platformHooks": [ { "platform": "string", "hook": "string", "angle": "string" } ],
   "channelMap": [ { "channel": "string", "effectiveness": "string", "decaySignal": "string" } ],
   "validationRoadmap": [ { "step": "string", "cost": "string", "expectedOutcome": "string" } ],
-  "futureTrends": [ { "trend": "string", "trigger": "string", "timing": "string" } ],
+  "futureTrends": [ { "trend": "string", "trigger": "string", "timing": "string", "source": "string", "confidence": "high|medium|low" } ],
   "distributionLeverage": [ { "lever": "string", "description": "string" } ],
   "revenueModelFit": [ { "model": "string", "fit": "string", "reasoning": "string" } ],
   "notFound": ["string"]
@@ -351,6 +367,7 @@ USER ASSETS: ${userContext.assets.join(', ') || 'None specified'}
 PREFERRED ACQUISITION CHANNEL: ${userContext.acquisitionChannel || 'Not specified — recommend the best channel for this niche'}
 PREFERRED REVENUE MODEL: ${userContext.revenueModel || 'Not specified — recommend the best model'}
 BUYER TYPE: ${userContext.buyerType || 'Not specified — infer from niche'}
+GOAL TIMELINE: ${userContext.goalTimeline || 'Not specified'}
 
 ${batch1Context}
 
@@ -364,6 +381,7 @@ IMPORTANT:
 - Your GTM plan MUST be consistent with the upstream market and risk data above.
 - If the market is saturated (per upstream), your GTM should focus on differentiation, not volume.
 - Align channel recommendations to the user's budget — don't recommend paid ads to a bootstrapped user.
+- If the user specified a goal timeline (e.g., "Revenue in 30 days"), the GTM plan weeks MUST fit within that window. A 90-day plan for a 30-day timeline is useless.
 - If the user specified an acquisition channel, build the GTM plan around THAT channel primarily.
 - GTM costs must reference the user's actual budget. Don't suggest $5k ad spend for someone with $500.
 - futureTrends MUST be derived from the TREND DATA section, not invented.
@@ -381,19 +399,21 @@ export function layer7Prompt(
   userContext?: { stage?: string; budget?: string; uniqueInsight?: string }
 ) {
   const system = `
-You are the Anti-Commoditisation module. For the given niche, generate 6 moat strategies:
+You are the Anti-Commoditisation module. For the given niche, generate 3 to 6 moat strategies from this menu:
 data advantage, workflow deep-integration, network effect, regulatory moat,
 community moat, and switching cost architecture.
 
+CRITICAL: SKIP any moat type that is irrelevant or impossible for a user at this stage and budget.
+A bootstrapped MVP with $0 budget should NOT see a regulatory moat or a network effect moat.
+Only include moats the user could realistically BEGIN building within their current constraints.
+
 ${DATA_INTEGRITY_RULES}
 
-Each moat must include: type, strategy, implementation steps, and time to effect.
-Prioritize moats by what THIS user can build with THEIR current resources.
-A bootstrapped MVP does not need a regulatory moat — they need a community or data moat.
+Each moat must include: type, strategy, implementation steps, time to effect, confidence level, and estimated cost.
 
 OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers).
 {
-  "moats": [ { "type": "string", "strategy": "string", "implementation": "string", "timeToEffect": "string" } ],
+  "moats": [ { "type": "string", "strategy": "string", "implementation": "string", "timeToEffect": "string", "confidence": "high|medium|low", "estimatedCost": "string" } ],
   "notFound": ["string"]
 }
 `.trim();

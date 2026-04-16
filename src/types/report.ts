@@ -168,7 +168,7 @@ export const layer6Schema = z.object({
   platformHooks: z.array(z.object({ platform: z.string(), hook: z.string(), angle: z.string() })),
   channelMap: z.array(z.object({ channel: z.string(), effectiveness: z.string(), decaySignal: z.string() })),
   validationRoadmap: z.array(z.object({ step: z.string(), cost: z.string(), expectedOutcome: z.string() })),
-  futureTrends: z.array(z.object({ trend: z.string(), trigger: z.string(), timing: z.string() })),
+  futureTrends: z.array(z.object({ trend: z.string(), trigger: z.string(), timing: z.string(), source: z.string().optional().default(''), confidence: z.preprocess((val) => String(val).toLowerCase(), z.enum(['high', 'medium', 'low'])).catch('medium') })),
   distributionLeverage: z.array(z.object({ lever: z.string(), description: z.string() })),
   revenueModelFit: z.array(z.object({ model: z.string(), fit: z.string(), reasoning: z.string().optional().default('') })),
   notFound: z.array(z.string()).min(1).default(["No additional limitations identified"]),
@@ -183,6 +183,8 @@ export const layer7Schema = z.object({
     strategy: z.string(),
     implementation: z.string(),
     timeToEffect: z.string(),
+    confidence: z.preprocess((val) => String(val).toLowerCase(), z.enum(['high', 'medium', 'low'])).catch('medium'),
+    estimatedCost: z.string().optional().default('Not estimated'),
   })),
   notFound: z.array(z.string()).min(1).default(["No additional limitations identified"]),
 });

@@ -87,7 +87,7 @@ export function ProIntakeWizard() {
   const router = useRouter();
 
   const [form, setForm] = useState({
-    niche: '', geo: '', stage: '', keywords: '',
+    niche: '', geo: '', stage: '',
     budget: '', time: '', timeline: '', assets: [] as string[],
     urls: '', sources: [] as string[],
     fit: [] as string[],
