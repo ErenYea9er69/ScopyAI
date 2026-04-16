@@ -62,15 +62,15 @@ export async function searchMarket(niche: string, geography: string) {
 
 export async function searchCompetitors(niche: string, geography?: string) {
   const geoClause = geography ? ` in ${geography}` : '';
-  const query = `top competitors pricing features for ${niche}${geoClause}`;
-  const response = await tavilySearch(query, { maxResults: 5 });
+  const query = `${niche} alternatives vs competitors pricing reviews${geoClause}`;
+  const response = await tavilySearch(query, { maxResults: 7 });
   return { results: response.results };
 }
 
 export async function searchPainPoints(niche: string, sources: string[], geography?: string) {
   const domains = sources.length > 0 ? sources : ["reddit.com", "quora.com", "trustpilot.com"];
   const geoClause = geography ? ` in ${geography}` : '';
-  const query = `biggest complaints pain points negative reviews "${niche}"${geoClause}`;
+  const query = `"frustrated with" OR "problem with" OR "hate" OR "complaints" ${niche}${geoClause}`;
   
   const response = await tavilySearch(query, {
     includeDomains: domains,
@@ -81,8 +81,15 @@ export async function searchPainPoints(niche: string, sources: string[], geograp
 }
 
 export async function searchTrends(keywords: string) {
-  const query = `${keywords} trend velocity sentiment analysis future outlook`;
-  const response = await tavilySearch(query, { includeAnswer: true, maxResults: 3, timeRange: 'year', topic: 'news' });
+  const query = `${keywords} growing OR declining 2024 2025 market trend demand`;
+  const response = await tavilySearch(query, { includeAnswer: true, maxResults: 5, timeRange: 'year', topic: 'news' });
+  return { answer: response.answer, results: response.results };
+}
+
+export async function searchUnitEconomics(niche: string, geography?: string) {
+  const geoClause = geography ? ` in ${geography}` : '';
+  const query = `${niche} customer acquisition cost CAC LTV pricing benchmark churn rate SaaS metrics${geoClause}`;
+  const response = await tavilySearch(query, { includeAnswer: true, maxResults: 5, searchDepth: 'advanced', topic: 'finance' });
   return { answer: response.answer, results: response.results };
 }
 

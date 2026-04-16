@@ -146,7 +146,7 @@ export async function generateReport(
     // --- Batch 2: Layers 4, 5, 6, 7 (parallel, with Batch 1 context) ---
     const [l4, l5, l6, l7] = await Promise.allSettled([
       runLayer('layer4', () => {
-        const p = layer4Prompt(intake.niche, research, intake.competitorUrls);
+        const p = layer4Prompt(intake.niche, research, intake.competitorUrls, batch1Context);
         return generateStructuredOutput(p.system, p.user, layer4Schema, MODELS.REASONING);
       }, onProgress),
       runLayer('layer5', () => {
@@ -158,7 +158,7 @@ export async function generateReport(
         return generateStructuredOutput(p.system, p.user, layer6Schema, MODELS.REASONING);
       }, onProgress),
       runLayer('layer7', () => {
-        const p = layer7Prompt(intake.niche, research, batch1Context);
+        const p = layer7Prompt(intake.niche, research, batch1Context, { stage: userContext.stage, budget: userContext.budget });
         return generateStructuredOutput(p.system, p.user, layer7Schema, MODELS.REASONING);
       }, onProgress),
     ]);
@@ -170,7 +170,7 @@ export async function generateReport(
 
     // ===== STEP 4: Layer 8 (persona-specific) =====
     await runLayer('layer8', async () => {
-      const p = layer8Prompt(intake.niche, persona.archetype as Archetype, research);
+      const p = layer8Prompt(intake.niche, persona.archetype as Archetype, research, userContext, intake.geography, batch1Context);
       const result = await generateStructuredOutput(p.system, p.user, layer8Schema, MODELS.REASONING);
       report.layers.layer8 = result;
     }, onProgress);
@@ -180,7 +180,8 @@ export async function generateReport(
     console.log('[Generator] Step 5: Running Tri-Agent Debate...');
 
     try {
-      report.debate = await runTriAgentDebate(intake.niche, research, userContext);
+      const layerSummary = buildLayerSummary(report.layers);
+      report.debate = await runTriAgentDebate(intake.niche, research, userContext, layerSummary);
       onProgress?.({ step: 'debate', status: 'complete' });
     } catch (err) {
       console.error('[Generator] Debate failed:', err);
@@ -276,3 +277,50 @@ function buildBatch1Summary(layers: FullReport['layers']): string {
   return parts.join('\n');
 }
 
+/**
+ * Builds a condensed summary of ALL layer outputs for the debate agents.
+ * This ensures the debate critiques the actual REPORT CLAIMS, not just raw research.
+ */
+function buildLayerSummary(layers: FullReport['layers']): string {
+  const parts: string[] = ['=== REPORT CLAIMS TO EVALUATE ==='];
+
+  if (layers.layer1) {
+    parts.push(`[L1 AUDIENCE] Top pains: ${layers.layer1.painPoints?.slice(0, 3).map(p => `${p.pain} (${p.confidence})`).join('; ') || 'None'}`);
+    parts.push(`[L1 AUDIENCE] Price range: ${layers.layer1.paymentThreshold?.low || '?'} – ${layers.layer1.paymentThreshold?.high || '?'}`);
+  }
+
+  if (layers.layer2) {
+    parts.push(`[L2 MARKET] TAM: ${layers.layer2.tam?.range || '?'} (${layers.layer2.tam?.confidence || 'low'})`);
+    parts.push(`[L2 MARKET] Trend: ${layers.layer2.trendTrajectory?.direction || '?'}`);
+    parts.push(`[L2 MARKET] Timing: ${layers.layer2.marketTimingVerdict || '?'}`);
+  }
+
+  if (layers.layer3) {
+    parts.push(`[L3 RISK] Saturation: ${layers.layer3.saturationScore?.percentage || 0}%`);
+    parts.push(`[L3 RISK] AI disruption: ${layers.layer3.aiDisruptionRisk?.score || 0}/10`);
+    parts.push(`[L3 RISK] Execution difficulty: ${layers.layer3.executionDifficulty?.score || 0}/100`);
+  }
+
+  if (layers.layer4) {
+    parts.push(`[L4 COMPETITORS] Found: ${layers.layer4.competitors?.length || 0} competitors`);
+    parts.push(`[L4 COMPETITORS] Sweet spot: ${layers.layer4.pricingSpectrum?.yourSweetSpot || '?'}`);
+    parts.push(`[L4 COMPETITORS] Gaps: ${layers.layer4.marketGaps?.slice(0, 2).map(g => g.claim).join('; ') || 'None'}`);
+  }
+
+  if (layers.layer5) {
+    parts.push(`[L5 ECONOMICS] CAC: ${layers.layer5.cacBenchmark?.range || '?'} (${layers.layer5.cacBenchmark?.confidence || 'low'})`);
+    parts.push(`[L5 ECONOMICS] LTV:CAC: ${layers.layer5.ltvCacVerdict?.ratio || '?'} — ${layers.layer5.ltvCacVerdict?.verdict || '?'}`);
+    parts.push(`[L5 ECONOMICS] Break-even: ${layers.layer5.breakEven?.timeline || '?'}`);
+  }
+
+  if (layers.layer6) {
+    parts.push(`[L6 GTM] Channels: ${layers.layer6.channelMap?.slice(0, 3).map(c => c.channel).join(', ') || '?'}`);
+    parts.push(`[L6 GTM] Revenue models: ${layers.layer6.revenueModelFit?.slice(0, 2).map(r => `${r.model} (${r.fit})`).join(', ') || '?'}`);
+  }
+
+  if (layers.layer7) {
+    parts.push(`[L7 MOAT] Strategies: ${layers.layer7.moats?.slice(0, 3).map(m => m.type).join(', ') || '?'}`);
+  }
+
+  return parts.join('\n');
+}

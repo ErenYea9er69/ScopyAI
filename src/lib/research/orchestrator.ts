@@ -19,6 +19,7 @@ export type ResearchData = {
   painPoints: string[];
   trends: string[];
   regulations: string[];
+  unitEconomics: string[];
   sources: { url: string; title: string, confidence: 'high' | 'medium' | 'low' }[];
   researchQuality: {
     marketDataFound: boolean;
@@ -26,6 +27,7 @@ export type ResearchData = {
     painPointDataFound: boolean;
     trendDataFound: boolean;
     regulationDataFound: boolean;
+    unitEconomicsDataFound: boolean;
     totalSources: number;
     summary: string;
   };
@@ -55,12 +57,13 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
     .map(p => platformToDomain[p] || p)
     .filter(d => d.includes('.'));  // Only keep valid-looking domains
 
-  const [marketRes, compRes, painRes, trendRes, regRes, googleFallback] = await Promise.all([
+  const [marketRes, compRes, painRes, trendRes, regRes, econRes, googleFallback] = await Promise.all([
     tavily.searchMarket(intake.niche, intake.geography),
     tavily.searchCompetitors(intake.niche, intake.geography),
     tavily.searchPainPoints(intake.niche, complaintDomains, intake.geography),
     tavily.searchTrends(intake.niche),
     tavily.searchRegulations(intake.niche, intake.geography),
+    tavily.searchUnitEconomics(intake.niche, intake.geography),
     serper.googleSearch(`${intake.niche} software solutions ${intake.geography}`) // Fallback/Supplemental
   ]);
 
@@ -112,22 +115,42 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
     .filter(Boolean)
     .flatMap((ex: any) => ex?.results?.map((r: any) => r.rawContent || r.content) || []);
 
-  // Aggregate Raw Strings (merge first pass + re-search)
+  // Helper: format a Tavily result with URL attribution
+  const fmt = (r: any): string => {
+    const url = r?.url || 'unknown';
+    const title = r?.title || '';
+    const content = r?.content || r?.rawContent || '';
+    return `[SOURCE: ${url} | ${title}] ${content}`;
+  };
+
+  // Aggregate Raw Strings with source URLs embedded (merge first pass + re-search)
   const marketSize = [
-    marketRes?.answer, ...(marketRes?.results?.map((r: any) => r.content) || []),
-    marketRes2?.answer, ...(marketRes2?.results?.map((r: any) => r.content) || []),
+    ...(marketRes?.answer ? [`[TAVILY ANSWER] ${marketRes.answer}`] : []),
+    ...(marketRes?.results?.map(fmt) || []),
+    ...(marketRes2?.answer ? [`[TAVILY ANSWER] ${marketRes2.answer}`] : []),
+    ...(marketRes2?.results?.map(fmt) || []),
   ].filter(Boolean) as string[];
   const competitors = [
     ...extractedCompetitorsContext,
-    [compRes?.results?.map((r: any) => r.content)].flat(),
-    [compRes2?.results?.map((r: any) => r.content)].flat(),
-  ].flat().filter(Boolean);
+    ...(compRes?.results?.map(fmt) || []),
+    ...(compRes2?.results?.map(fmt) || []),
+  ].filter(Boolean);
   const painPoints = [
-    painRes?.results?.map((r: any) => r.content),
-    painRes2?.results?.map((r: any) => r.content),
-  ].flat().filter(Boolean);
-  const trends = [trendRes?.answer, ...(trendRes?.results?.map((r: any) => r.content) || [])].filter(Boolean) as string[];
-  const regulations = [regRes?.answer, ...(regRes?.results?.map((r: any) => r.content) || [])].filter(Boolean) as string[];
+    ...(painRes?.results?.map(fmt) || []),
+    ...(painRes2?.results?.map(fmt) || []),
+  ].filter(Boolean);
+  const trends = [
+    ...(trendRes?.answer ? [`[TAVILY ANSWER] ${trendRes.answer}`] : []),
+    ...(trendRes?.results?.map(fmt) || []),
+  ].filter(Boolean) as string[];
+  const regulations = [
+    ...(regRes?.answer ? [`[TAVILY ANSWER] ${regRes.answer}`] : []),
+    ...(regRes?.results?.map(fmt) || []),
+  ].filter(Boolean) as string[];
+  const unitEconomics = [
+    ...(econRes?.answer ? [`[TAVILY ANSWER] ${econRes.answer}`] : []),
+    ...(econRes?.results?.map(fmt) || []),
+  ].filter(Boolean) as string[];
 
   // Merge and Deduplicate Source URLs (including re-search results)
   const rawSources = [
@@ -136,6 +159,7 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
     ...(painRes?.results || []),
     ...(trendRes?.results || []),
     ...(regRes?.results || []),
+    ...(econRes?.results || []),
     ...(marketRes2?.results || []),
     ...(compRes2?.results || []),
     ...(painRes2?.results || []),
@@ -182,6 +206,7 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
     painPointDataFound: painPoints.length > 0,
     trendDataFound: trends.length > 0,
     regulationDataFound: regulations.length > 0,
+    unitEconomicsDataFound: unitEconomics.length > 0,
     totalSources: finalizedSources.length,
     summary: [
       `Market: ${marketSize.length} sources`,
@@ -189,6 +214,7 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
       `Pain Points: ${painPoints.length} sources`,
       `Trends: ${trends.length} sources`,
       `Regulations: ${regulations.length} sources`,
+      `Unit Economics: ${unitEconomics.length} sources`,
       `Total unique sources: ${finalizedSources.length}`,
       finalizedSources.length < 5 ? '⚠️ LOW DATA QUALITY — results may be unreliable for this geography/niche' : '',
     ].filter(Boolean).join(' | '),
@@ -202,6 +228,7 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
     painPoints,
     trends,
     regulations,
+    unitEconomics,
     sources: finalizedSources,
     researchQuality,
   };

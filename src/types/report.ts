@@ -164,7 +164,7 @@ export type Layer5 = z.infer<typeof layer5Schema>;
 
 export const layer6Schema = z.object({
   offerIdeas: z.array(z.object({ offer: z.string(), pricingLogic: z.string(), confidence: confidenceLevel })),
-  gtmPlan: z.array(z.object({ week: z.string(), action: z.string(), cost: z.string() })),
+  gtmPlan: z.array(z.object({ week: z.string(), action: z.string(), cost: z.string(), deliverable: z.string().optional().default(''), successMetric: z.string().optional().default('') })),
   platformHooks: z.array(z.object({ platform: z.string(), hook: z.string(), angle: z.string() })),
   channelMap: z.array(z.object({ channel: z.string(), effectiveness: z.string(), decaySignal: z.string() })),
   validationRoadmap: z.array(z.object({ step: z.string(), cost: z.string(), expectedOutcome: z.string() })),
