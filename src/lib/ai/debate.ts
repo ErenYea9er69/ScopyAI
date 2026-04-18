@@ -173,13 +173,27 @@ evaluating the same niche. Weigh all evidence and produce a final conditional ve
 Format: "GO if [condition]. PIVOT if [condition]. KILL if [condition] within [N] days."
 Also produce a compositeScore 0-100 (weighted average of opportunity, inverse-risk, and feasibility).
 
+CRITICAL SCORING RULES:
+1. CONTRADICTORY CERTAINTY: When Builder and Cynic scores are within 15 points of each other AND both are above 60, this is a RED FLAG. It means both agents found strong but contradictory evidence. In this case:
+   - Set contradictoryCertainty to true
+   - Cap compositeScore at 50 maximum
+   - Your finalVerdict MUST begin with "CONTRADICTORY EVIDENCE —"
+   - Explain that the research supports both optimistic AND pessimistic interpretations equally
+
+2. OPERATOR OVERRIDE: If the Operator scores IMPOSSIBLE (score > 85), the compositeScore MUST NOT exceed 30 regardless of how optimistic the Builder is. An opportunity that cannot be executed is not an opportunity for THIS user.
+
+3. SCORE DIVERGENCE: If Builder is GO but Cynic is KILL, do NOT average them into a comfortable middle ground. One of them is wrong. State which one and why.
+
+4. If ALL THREE agents flag insufficient data, the compositeScore MUST be below 40 and the verdict must state "INSUFFICIENT DATA TO EVALUATE".
+
 OUTPUT: Valid JSON exactly matching this structure (no markdown wrappers):
 {
   "builder": { "score": 0, "signal": "string", "reasoning": "string", "keyPoints": ["string"] },
   "cynic": { "score": 0, "signal": "string", "reasoning": "string", "keyPoints": ["string"] },
   "operator": { "score": 0, "signal": "string", "reasoning": "string", "keyPoints": ["string"] },
   "finalVerdict": "string",
-  "compositeScore": 0
+  "compositeScore": 0,
+  "contradictoryCertainty": false
 }
 `.trim();
 
@@ -202,6 +216,9 @@ OPERATOR AGENT (Execution):
 Score: ${operator.score}/100 — Signal: ${operator.signal}
 Reasoning: ${operator.reasoning}
 Key Points: ${operator.keyPoints.join('; ')}
+
+CHECK: Are Builder and Cynic within 15 points of each other AND both above 60? If yes → CONTRADICTORY CERTAINTY.
+CHECK: Is Operator score > 85 (IMPOSSIBLE)? If yes → cap compositeScore at 30.
 
 Weigh all three perspectives against the REPORT CLAIMS above. Produce the final conditional verdict and composite score.
 `.trim();

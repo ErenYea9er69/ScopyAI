@@ -381,19 +381,31 @@ function buildLayerSummary(layers: FullReport['layers']): string {
  * Reconciles report layers based on debate results.
  * If the debate flagged significant issues, this function physically
  * annotates the layer outputs so the user sees consistent information.
+ *
+ * V2: Added contradictory certainty detection — when Builder and Cynic
+ * both score >70 with opposing signals, this is a stronger warning than
+ * either high-risk or low-builder alone.
  */
 function reconcileReport(report: FullReport): void {
   if (!report.debate) return;
 
-  const { cynic, builder, compositeScore } = report.debate;
+  const { cynic, builder, operator, compositeScore, contradictoryCertainty } = report.debate;
   const cynicHigh = cynic.score > 70;
   const builderLow = builder.score < 50;
   const isHighRisk = cynicHigh && builderLow;
   const isNonViable = compositeScore < 30;
+  
+  // V2: Detect contradictory certainty — both agents highly confident in opposite conclusions
+  const scoreDelta = Math.abs(builder.score - cynic.score);
+  const isContradictoryCertainty = contradictoryCertainty || 
+    (scoreDelta < 15 && builder.score > 70 && cynic.score > 70);
+  
+  // V2: Detect Operator IMPOSSIBLE override
+  const isOperatorImpossible = operator.score > 85;
 
-  console.log(`[Reconciler] Cynic=${cynic.score}, Builder=${builder.score}, Composite=${compositeScore}, HighRisk=${isHighRisk}, NonViable=${isNonViable}`);
+  console.log(`[Reconciler] Cynic=${cynic.score}, Builder=${builder.score}, Operator=${operator.score}, Composite=${compositeScore}, HighRisk=${isHighRisk}, NonViable=${isNonViable}, ContradictoryCertainty=${isContradictoryCertainty}, OperatorImpossible=${isOperatorImpossible}`);
 
-  if (!isHighRisk && !isNonViable) return; // No reconciliation needed
+  if (!isHighRisk && !isNonViable && !isContradictoryCertainty && !isOperatorImpossible) return; // No reconciliation needed
 
   // Helper: downgrade confidence fields in an object tree
   const downgradeConfidence = (obj: any): void => {
@@ -432,14 +444,22 @@ function reconcileReport(report: FullReport): void {
     warnings.push(`🚫 NON-VIABLE: Composite debate score ${compositeScore}/100. This niche was flagged as non-viable by the adversarial risk system.`);
   }
 
+  if (isContradictoryCertainty) {
+    warnings.push(`⚠️ CONTRADICTORY CERTAINTY: Builder scored ${builder.score}/100 (${builder.signal}) while Cynic scored ${cynic.score}/100 (${cynic.signal}). Both agents are highly confident in OPPOSITE conclusions. The research data supports both optimistic and pessimistic interpretations equally. Treat ALL scores in this report with skepticism.`);
+  }
+
+  if (isOperatorImpossible) {
+    warnings.push(`🚫 EXECUTION IMPOSSIBLE: Operator scored ${operator.score}/100 — this idea cannot be executed with the user's current budget, skills, and timeline. Key blockers: ${operator.keyPoints.slice(0, 2).join('; ')}`);
+  }
+
   // Apply to all layers
   const layers = report.layers;
   for (const layerKey of Object.keys(layers) as (keyof typeof layers)[]) {
     const layer = layers[layerKey];
     if (!layer) continue;
 
-    // Downgrade confidence on high-risk reports
-    if (isHighRisk) {
+    // Downgrade confidence on high-risk, contradictory, or impossible reports
+    if (isHighRisk || isContradictoryCertainty || isOperatorImpossible) {
       downgradeConfidence(layer);
     }
 
@@ -447,5 +467,22 @@ function reconcileReport(report: FullReport): void {
     appendWarnings(layer, warnings);
   }
 
-  console.log(`[Reconciler] Applied ${warnings.length} warnings to ${Object.keys(layers).length} layers.`);
+  // V2: If contradictory certainty was detected server-side but not by the LLM, flag it
+  if (isContradictoryCertainty && !report.debate.contradictoryCertainty) {
+    report.debate.contradictoryCertainty = true;
+  }
+
+  // V2: Enforce Operator override on composite score
+  if (isOperatorImpossible && report.debate.compositeScore > 30) {
+    console.warn(`[Reconciler] Operator IMPOSSIBLE override: capping compositeScore from ${report.debate.compositeScore} to 30`);
+    report.debate.compositeScore = 30;
+  }
+
+  // V2: Enforce contradictory certainty cap on composite score
+  if (isContradictoryCertainty && report.debate.compositeScore > 50) {
+    console.warn(`[Reconciler] Contradictory certainty override: capping compositeScore from ${report.debate.compositeScore} to 50`);
+    report.debate.compositeScore = 50;
+  }
+
+  console.log(`[Reconciler] Applied ${warnings.length} warnings to ${Object.keys(layers).length} layers. Final compositeScore: ${report.debate.compositeScore}`);
 }

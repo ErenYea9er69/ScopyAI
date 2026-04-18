@@ -99,6 +99,30 @@ export async function searchRegulations(niche: string, geography: string) {
   return { answer: response.answer, results: response.results };
 }
 
+/**
+ * Searches for evidence that a competitor has shut down, failed, or gone bankrupt.
+ * This is the "dead competitor detector" that prevents citing defunct companies
+ * as active market participants.
+ */
+export async function searchCompetitorStatus(competitorName: string) {
+  const query = `"${competitorName}" shutdown OR "shut down" OR closed OR defunct OR "out of business" OR failed OR bankruptcy OR "ceased operations"`;
+  const response = await tavilySearch(query, { maxResults: 3, timeRange: 'year' });
+  return { results: response.results };
+}
+
+/**
+ * Specifically searches for NEGATIVE market signals — declining participation,
+ * controversies, platform contractions. The existing trend search only looks
+ * for growth/decline keywords broadly; this targets failure signals directly.
+ */
+export async function searchMarketDecline(niche: string, geography?: string) {
+  const geoClause = geography ? ` in ${geography}` : '';
+  const currentYear = new Date().getFullYear();
+  const query = `"${niche}" declining OR shrinking OR controversy OR crisis OR "losing customers" OR "shutting down" OR boycott ${currentYear}${geoClause}`;
+  const response = await tavilySearch(query, { maxResults: 4, timeRange: 'year', topic: 'news' });
+  return { results: response.results };
+}
+
 export async function extractPage(url: string, niche?: string) {
   trackTavilyUsage(1); // Extract costs credits too
   let clientIndex = Math.floor(Math.random() * tvlyClients.length);

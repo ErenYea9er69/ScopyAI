@@ -127,6 +127,15 @@ export type Layer3 = z.infer<typeof layer3Schema>;
 
 // -- Layer 4: Competitor Intelligence --
 
+export const failedCompetitorSchema = z.object({
+  name: z.string(),
+  shutdownDate: z.string(),
+  fundingRaised: z.string(),
+  reasonForFailure: z.string(),
+  lessonForUser: z.string(),
+});
+export type FailedCompetitor = z.infer<typeof failedCompetitorSchema>;
+
 export const layer4Schema = z.object({
   userCompetitorVerdict: z.string().optional(),
   competitors: z.array(z.object({
@@ -138,6 +147,7 @@ export const layer4Schema = z.object({
     strengths: z.array(z.string()),
     weaknesses: z.array(z.string()),
   })),
+  failedCompetitors: z.array(failedCompetitorSchema).optional().default([]),
   marketGaps: z.array(citedClaim),
   seoWhiteSpace: z.array(z.object({ keyword: z.string(), difficulty: z.string(), opportunity: z.string() })),
   pricingSpectrum: z.object({ low: z.string(), mid: z.string(), high: z.string(), yourSweetSpot: z.string() }),
@@ -219,6 +229,7 @@ export const debateResultSchema = z.object({
   operator: agentVerdictSchema,
   finalVerdict: z.string(),
   compositeScore: z.number().min(0).max(100),
+  contradictoryCertainty: z.boolean().optional().default(false),
 });
 export type DebateResult = z.infer<typeof debateResultSchema>;
 

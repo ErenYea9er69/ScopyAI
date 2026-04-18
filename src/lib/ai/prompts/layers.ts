@@ -48,6 +48,10 @@ DATA INTEGRITY RULES — YOU MUST FOLLOW THESE:
 5. It is ALWAYS better to say "Insufficient data to estimate" than to fabricate a number.
 6. Do NOT invent competitor revenue, traffic, or market share figures. If a competitor's revenue is not in the research data, say "Revenue: Not publicly available".
 7. Do NOT invent URLs or source citations. Only cite sources that appear in the [SOURCE: ...] tags above.
+8. If a competitor is tagged [⚠️ DEFUNCT], you MUST NOT cite it as an active competitor. Instead, analyze WHY it failed and what that failure means for the user's idea. A dead well-funded competitor is a WARNING SIGN, not a market gap. Include it in the failedCompetitors array if applicable.
+9. Sources tagged [AGE: 2023] or older are STALE. Do not use them as primary evidence for current market conditions. If they are the ONLY sources available, explicitly state "Based on data from [year] — current conditions may differ significantly" and set confidence to "low".
+10. For rapidly evolving markets (AI, crypto, social media, health tech), sources older than 12 months should be treated with extreme caution and flagged in the notFound array as a limitation.
+11. TAM/SAM/SOM MUST ONLY be derived from market research reports, industry analyses, or government statistics. Podcast feeds, blog posts, Reddit threads, social media, and news articles are NOT valid TAM sources. If no valid TAM source exists, set TAM to "Insufficient data — no verified market sizing available" with confidence "low".
 
 TONE RULES:
 - Write in a direct, analytical tone. Be blunt. Be specific.
@@ -153,6 +157,18 @@ Produce Layer 2 Market Intelligence. Use ranges not point estimates. Cite source
 IMPORTANT: If a buyer type is specified, calculate TAM/SAM/SOM for THAT segment specifically.
 If the user provided a "WHY NOW" signal, factor it into your market timing verdict — it may indicate a regulatory change, competitor exit, or technology shift that affects timing.
 If user stage is pre-MVP, focus SOM on validation-addressable market. If scaling, focus on growth ceiling.
+
+TAM SOURCE VALIDATION:
+- Before citing any source for TAM/SAM/SOM, verify the source URL is from a market research provider (Statista, Grand View Research, IBISWorld, Gartner, Mordor Intelligence, government statistics) or a credible industry report.
+- Podcast RSS feeds, social media posts, blog opinions, and general news articles are NOT valid TAM sources.
+- If a source URL contains "feeds.", ".rss", "acast.com", "podcast", or "anchor.fm", do NOT use it for market sizing.
+- If NO valid TAM source exists in the research data, set TAM range to "Insufficient data — no verified market sizing available for this niche/geography" and confidence to "low".
+- Distinguish between FUNDING raised by companies (venture capital) and actual MARKET SIZE. $13.5M raised by one startup is NOT evidence of a $13.5M market.
+
+DECLINE SIGNAL CHECK:
+- If any research data contains [⚠️ DECLINE SIGNAL] tags, you MUST factor these into your trend trajectory and market timing verdict.
+- A declining market with shrinking participation is NOT "growing" regardless of other signals.
+- If decline signals conflict with growth signals, set trendTrajectory.direction to "stable" at most, explain the conflict, and note it in notFound.
 `.trim();
 
   return { system, user };
@@ -203,6 +219,18 @@ ${researchBlock([...research.trends, ...research.regulations, ...research.compet
 Be ruthlessly honest. Name the specific AI model that threatens this niche.
 Score saturation 0-100. Score execution difficulty 0-100 against this specific user's resources.
 If the user provided a "WHY NOW" signal, cross-reference it against regulatory timelines and competitive shifts.
+
+BUDGET vs REQUIREMENTS REALITY CHECK:
+- For EVERY blocker you identify, estimate its cost to resolve.
+- If ANY SINGLE blocker costs more than the user's total stated budget, flag it as a FATAL EXECUTION BLOCKER and set executionDifficulty score to at least 85.
+- If the product requires third-party APIs that are NOT publicly available, or hardware/sensors that must be purchased and distributed, calculate the total dependency cost separately.
+- If total dependency costs exceed the user's budget, executionDifficulty.blockers MUST lead with this as the #1 blocker: "Core dependency cost ($X) exceeds total budget ($Y)".
+- Regulatory/compliance costs (HIPAA, GDPR, MHRA, FDA) must be estimated and compared against budget. If compliance alone exceeds 50% of the budget, this is a blocker.
+
+DEFUNCT COMPETITOR WARNING:
+- If ANY competitor data contains [⚠️ DEFUNCT] tags, this is a CRITICAL signal.
+- A well-funded competitor that failed at the same thesis means the market REJECTED this approach. Do NOT treat their absence as a "market gap".
+- Factor their failure into your saturationScore reasoning and scenarioSimulator.
 
 FOUNDER FIT WEIGHTING:
 - If the user checked 4+ founder-fit statements, reduce executionDifficulty score by 15-20 points (they have strong leverage).
@@ -255,6 +283,18 @@ IMPORTANT:
 - Market gaps should map to the AUDIENCE pain points from upstream data.
 - The pricingSpectrum.yourSweetSpot should be consistent with any audience payment thresholds from upstream.
 - Competitor velocity should acknowledge upstream saturation scores.
+
+DEFUNCT COMPETITOR RULES:
+- If ANY competitor entry is prefixed with [⚠️ DEFUNCT], you MUST:
+  (a) EXCLUDE it from the main "competitors" array (it is not an active competitor).
+  (b) INCLUDE it in the "failedCompetitors" array with: name, shutdownDate (if known), fundingRaised, reasonForFailure, and lessonForUser.
+  (c) In your userCompetitorVerdict, explicitly state that this competitor has shut down and what that means for the user's thesis.
+  (d) Do NOT treat a defunct competitor's market absence as a "gap" — it may be a graveyard.
+
+FINANCIAL DATA HONESTY:
+- For competitor revenue/traffic, ONLY use numbers that appear verbatim in the [SOURCE:] data.
+- If a source says "raised $13.5M", that is FUNDING, not revenue. Do NOT confuse funding rounds with revenue.
+- If revenue is not in the data, say "Revenue: Not publicly available" — do NOT estimate.
 `.trim();
 
   return { system, user };
@@ -312,6 +352,22 @@ If upstream says the market is saturated or declining, your CAC estimates should
 If the user specified a revenue model, calculate economics for THAT model specifically.
 If the user specified a buyer type (e.g., Enterprise vs Consumer), adjust CAC/LTV accordingly — Enterprise CAC is 10-100x consumer.
 If the user specified a goal timeline, the break-even analysis MUST factor it — a "Revenue in 30 days" user needs a fundamentally different burn rate scenario than a "Revenue in 12 months" user.
+
+HIDDEN COST COMPLETENESS:
+- Break-even calculations MUST include ALL cost categories discovered across the report:
+  * API/integration fees (including non-public APIs that may require partnerships)
+  * Hardware costs (if the product requires physical sensors, devices, or distribution)
+  * Legal/compliance costs (from Layer 3 regulatory data — HIPAA, GDPR, MHRA, FDA)
+  * Customer acquisition costs (from your own CAC estimates)
+  * Operational costs (hosting, support, maintenance)
+  * Founder's time valued at market rate (if working 25h/week, that's ~$2,500/month opportunity cost at $50/hr)
+- A break-even analysis that ignores known costs from upstream layers is INVALID.
+- If the upstream data mentions regulatory costs of $5-20K, those MUST appear in your burn rate scenarios.
+- If the product requires hardware distribution (e.g., CGM sensors at $130/month each), factor per-user hardware costs into LTV calculations.
+
+GOAL TIMELINE REALITY CHECK:
+- If the user's goal timeline is "Revenue in 90 days" but your break-even analysis shows 12+ months, you MUST explicitly flag this contradiction: "The stated 90-day revenue goal is unrealistic given the unit economics. Minimum realistic timeline: [X months]."
+- Do NOT build a plan that confirms an unrealistic timeline without flagging the contradiction.
 `.trim();
 
   return { system, user };
@@ -385,6 +441,22 @@ IMPORTANT:
 - If the user specified an acquisition channel, build the GTM plan around THAT channel primarily.
 - GTM costs must reference the user's actual budget. Don't suggest $5k ad spend for someone with $500.
 - futureTrends MUST be derived from the TREND DATA section, not invented.
+
+CONVERSION RATE REALITY ANCHORING:
+- GTM plan conversion rates MUST use industry-realistic benchmarks. Do NOT invent optimistic numbers:
+  * Cold email: 15-25% open rate, 1-5% reply rate, 0.5-2% conversion rate
+  * Cold LinkedIn InMail/DM: 10-25% open rate, 1-3% response rate
+  * Landing page visitor-to-signup: 2-5% conversion
+  * Paid ad CTR: 1-3% (search), 0.5-1.5% (social)
+  * Workshop/webinar attendance from cold invite: 5-15% of invitees
+  * Partnership conversion from cold outreach: 2-8% (NOT 25%)
+- Any conversion rate you use that exceeds these benchmarks MUST include explicit justification.
+- If a GTM step relies on "network effects" or "word of mouth", this only works AFTER a critical mass — it cannot be the primary driver in weeks 1-4.
+
+ANTI-WISHFUL-THINKING RULE:
+- Each GTM week must include both a TARGET outcome and a PESSIMISTIC scenario.
+- Example: "Target: 5 box partnerships. Pessimistic: 1 partnership (industry cold-outreach conversion is 2-8%). Fallback if pessimistic: [specific action]."
+- If the GTM plan depends on distributor partnerships, supplier negotiations, or API access that the user doesn't currently have, flag the lead time: "Partnership negotiations typically take 3-6 months. Budget accordingly."
 `.trim();
 
   return { system, user };
