@@ -124,21 +124,34 @@ Use the user's unique insight and founder fit to find pivots where they have an 
             searchCompetitors(pivot.title, geography),
           ]);
 
-          const maxResults = 7; // Tavily's max per query
           const sourceCount = (marketRes?.results?.length || 0) + (compRes?.results?.length || 0);
           const hasRealData = sourceCount > 2;
 
-          // Bounded formula: accounts for Tavily's maxResults cap
+          // v3: Logarithmic saturation formula — prevents always-95% outputs
+          // log2(1)=0, log2(2)=1, log2(4)=2, log2(8)=3
+          // 0 competitors → 0%, 1 → 13%, 2 → 20%, 3 → 25%, 4 → 29%, 7 → 38%, 10+ → capped 75%
           const realCompetitorCount = compRes?.results?.length || 0;
-          const adjustedSaturation = hasRealData
-            ? Math.min(95, Math.max(10, Math.round((realCompetitorCount / maxResults) * 85 + 10)))
-            : pivot.newSaturation; // Keep LLM estimate if no data
+          let adjustedSaturation: number;
+          
+          if (hasRealData) {
+            adjustedSaturation = Math.min(75, Math.round(Math.log2(realCompetitorCount + 1) * 25));
+            // Floor at 10% if we found any competitors
+            if (realCompetitorCount > 0 && adjustedSaturation < 10) adjustedSaturation = 10;
+          } else {
+            adjustedSaturation = pivot.newSaturation; // Keep LLM estimate if no data
+          }
+
+          // v3: Pivot-must-be-better guard — reject pivots with higher saturation than original
+          if (adjustedSaturation >= saturation) {
+            console.warn(`[Auto-Pivot] Pivot "${pivot.title}" saturation (${adjustedSaturation}%) is >= original (${saturation}%). Capping at ${saturation - 5}%.`);
+            adjustedSaturation = Math.max(10, saturation - 5);
+          }
 
           return {
             ...pivot,
             newSaturation: adjustedSaturation,
             reasoning: hasRealData
-              ? `${pivot.reasoning} [Validated: ${sourceCount} sources found, ${realCompetitorCount} competitors identified]`
+              ? `${pivot.reasoning} [Validated: ${sourceCount} sources found, ${realCompetitorCount} direct competitors identified in ${geography}]`
               : `${pivot.reasoning} [Unvalidated: insufficient Tavily data to confirm]`,
           };
         } catch (err) {

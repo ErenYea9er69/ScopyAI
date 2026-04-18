@@ -38,7 +38,7 @@ export type ResearchData = {
   };
 };
 
-// ========== SOURCE QUALITY SCORING v2 ==========
+// ========== SOURCE QUALITY SCORING v3 ==========
 
 /** Domains that are never valid for market intelligence */
 const REJECT_DOMAIN_PATTERNS = [
@@ -46,6 +46,10 @@ const REJECT_DOMAIN_PATTERNS = [
   /cocktail/i, /recipe/i, /cooking/i,              // Food/drink sites
   /analytics\.usa\.gov/i,                            // Government analytics dashboards
   /wedding/i, /dating/i,                             // Irrelevant verticals
+  /snap\.berkeley\.edu/i,                             // Snap! visual programming (not research)
+  /scratch\.mit\.edu/i,                               // MIT Scratch (not research)
+  /huggingface\.co\/[^\/]+\/vocab/i,                 // HuggingFace vocabulary files
+  /\.txt$/i,                                         // Raw text files
 ];
 
 /** High-authority domains for market research */
@@ -56,15 +60,55 @@ const HIGH_AUTHORITY_DOMAINS = [
   'marketsandmarkets.com', 'euromonitor.com', 'frost.com',
 ];
 
-/** Government/academic domains */
+/** Government/academic domains — with exclusions for educational platforms that aren't research */
 const INSTITUTIONAL_DOMAINS = ['.gov', '.edu', '.ac.uk', '.nhs.uk'];
+
+/** .edu subdomains that are educational platforms, NOT research sources */
+const EDU_PLATFORM_EXCLUSIONS = [
+  'snap.berkeley.edu', 'scratch.mit.edu', 'cs50.harvard.edu',
+  'canvas.', 'blackboard.', 'moodle.',
+];
+
+/** Geography keywords to detect wrong-country sources */
+const GEOGRAPHY_KEYWORDS: Record<string, string[]> = {
+  'uk': ['united kingdom', 'britain', 'england', 'scotland', 'wales', 'uk market'],
+  'us': ['united states', 'america', 'us market', 'usa'],
+  'global': [], // No filtering for global
+};
+
+/** Countries that should trigger rejection when they appear in the TITLE for a different target geography */
+const WRONG_GEOGRAPHY_SIGNALS = [
+  'south korea', 'japan', 'china', 'brazil', 'india', 'spain',
+  'france', 'germany', 'italy', 'australia', 'canada', 'mexico',
+  'russia', 'saudi arabia', 'uae', 'nigeria', 'kenya', 'egypt',
+];
 
 /**
  * Attempts to extract a year from a URL or title string.
+ * For Reddit URLs, extracts the post creation date from the base36 post ID.
  * Returns the year as a number, or null if not found.
  */
 function extractYear(text: string): number | null {
-  // Match 4-digit years between 2010 and current year + 1
+  // Special handling for Reddit URLs — extract date from post ID
+  const redditMatch = text.match(/reddit\.com\/r\/[^\/]+\/comments\/([a-z0-9]+)\//i);
+  if (redditMatch) {
+    try {
+      // Reddit post IDs are base36 encoded timestamps (roughly)
+      const postId = redditMatch[1];
+      const timestamp = parseInt(postId, 36);
+      // Reddit post IDs started around 2005, timestamps are in seconds
+      // A rough heuristic: if the parsed number looks like a reasonable Unix timestamp
+      if (timestamp > 1000000 && timestamp < 2000000000) {
+        const date = new Date(timestamp * 1000);
+        const year = date.getFullYear();
+        if (year >= 2005 && year <= new Date().getFullYear()) {
+          return year;
+        }
+      }
+    } catch { /* Fall through to standard extraction */ }
+  }
+
+  // Standard year extraction from text
   const currentYear = new Date().getFullYear();
   const yearRegex = /\b(20[1-9]\d)\b/g;
   const matches = text.match(yearRegex);
@@ -78,12 +122,15 @@ function extractYear(text: string): number | null {
 /**
  * Scores a source's quality on multiple dimensions.
  * Returns a confidence level and whether to reject the source entirely.
+ * 
+ * v3: Added .edu platform exclusion, geography relevance check.
  */
 function scoreSource(
   url: string,
   title: string,
   nicheKeywords: string[],
-  score?: number
+  score?: number,
+  targetGeography?: string
 ): { confidence: 'high' | 'medium' | 'low'; reject: boolean; rejectReason?: string; year: number | null } {
   const cleanUrl = url.toLowerCase();
   const cleanTitle = (title || '').toLowerCase();
@@ -96,12 +143,26 @@ function scoreSource(
     }
   }
   
-  // Check if URL is an RSS/XML feed
-  if (cleanUrl.includes('/feed') && cleanUrl.includes('acast.com')) {
-    return { confidence: 'low', reject: true, rejectReason: 'Podcast RSS feed — not a market research source', year: null };
+  // Check if URL is an RSS/XML feed or podcast platform
+  if (cleanUrl.includes('acast.com') || cleanUrl.includes('anchor.fm') || cleanUrl.includes('podbean.com') ||
+      (cleanUrl.includes('/feed') && (cleanUrl.includes('.xml') || cleanUrl.includes('rss')))) {
+    return { confidence: 'low', reject: true, rejectReason: 'Podcast/RSS feed — not a market research source', year: null };
   }
 
-  // 2. RELEVANCE CHECK — does the source mention any niche keywords?
+  // 2. GEOGRAPHY RELEVANCE CHECK — reject sources about wrong countries
+  if (targetGeography && targetGeography.toLowerCase() !== 'global') {
+    const targetGeoLower = targetGeography.toLowerCase();
+    for (const wrongGeo of WRONG_GEOGRAPHY_SIGNALS) {
+      // Only reject if the TITLE specifically references a different country's market/report
+      if (cleanTitle.includes(wrongGeo) && 
+          (cleanTitle.includes('market') || cleanTitle.includes('report') || cleanTitle.includes('forecast')) &&
+          !cleanTitle.includes(targetGeoLower)) {
+        return { confidence: 'low', reject: true, rejectReason: `Source is about ${wrongGeo} market, but target geography is ${targetGeography}`, year: null };
+      }
+    }
+  }
+
+  // 3. RELEVANCE CHECK — does the source mention any niche keywords?
   const hasRelevance = nicheKeywords.some(kw => combined.includes(kw.toLowerCase()));
   if (!hasRelevance && nicheKeywords.length > 0) {
     // Give benefit of the doubt if search score is high
@@ -110,15 +171,23 @@ function scoreSource(
     }
   }
 
-  // 3. FRESHNESS CHECK
+  // 4. FRESHNESS CHECK
   const year = extractYear(combined);
   const currentYear = new Date().getFullYear();
   const isStale = year !== null && (currentYear - year) > 2;
 
-  // 4. AUTHORITY TIER
+  // 5. AUTHORITY TIER
   const isHighAuthority = HIGH_AUTHORITY_DOMAINS.some(d => cleanUrl.includes(d));
   const isInstitutional = INSTITUTIONAL_DOMAINS.some(d => cleanUrl.includes(d));
   const isRedditQuora = cleanUrl.includes('reddit.com') || cleanUrl.includes('quora.com');
+  
+  // v3: Check if .edu domain is actually an educational platform, not research
+  if (isInstitutional && cleanUrl.includes('.edu')) {
+    const isEduPlatform = EDU_PLATFORM_EXCLUSIONS.some(excl => cleanUrl.includes(excl));
+    if (isEduPlatform) {
+      return { confidence: 'low', reject: true, rejectReason: `Educational platform (${cleanUrl.split('/')[2]}), not academic research`, year: null };
+    }
+  }
   
   if (isHighAuthority || isInstitutional) {
     return { confidence: isStale ? 'medium' : 'high', reject: false, year };
@@ -138,29 +207,77 @@ function scoreSource(
 
 /**
  * Extracts likely competitor names from competitor research data strings.
- * Looks for company names mentioned in [SOURCE:] tags and content.
+ * v3: Uses multiple extraction strategies:
+ *   1. Brand names from URLs (e.g., supersapiens.com → "Supersapiens")
+ *   2. Source title parsing (e.g., "Levels vs MyFitnessPal" → ["Levels", "MyFitnessPal"])
+ *   3. Content keyword scanning for capitalized brand names
+ *   4. User-provided competitor URL domains
  */
-function extractCompetitorNames(competitorData: string[]): string[] {
+function extractCompetitorNames(competitorData: string[], userCompetitorUrls: string[] = []): string[] {
   const names = new Set<string>();
   
+  // Strategy 1: Extract brand names from user-provided competitor URLs
+  for (const url of userCompetitorUrls) {
+    try {
+      const domain = new URL(url.startsWith('http') ? url : `https://${url}`).hostname;
+      // Extract brand from domain (e.g., supersapiens.com → Supersapiens)
+      const brand = domain.replace(/^www\./, '').split('.')[0];
+      if (brand.length > 2) {
+        names.add(brand.charAt(0).toUpperCase() + brand.slice(1));
+      }
+    } catch { /* skip invalid URLs */ }
+  }
+  
+  // Strategy 2: Extract brand names from source URLs in competitor data
   for (const item of competitorData) {
-    // Extract from [SOURCE: url | Title] patterns
+    // Extract URL from [SOURCE: url | Title] pattern
+    const urlMatch = item.match(/\[SOURCE:\s*([^\s\|]+)/);
+    if (urlMatch && urlMatch[1]) {
+      try {
+        const domain = new URL(urlMatch[1].startsWith('http') ? urlMatch[1] : `https://${urlMatch[1]}`).hostname;
+        const brand = domain.replace(/^www\./, '').split('.')[0];
+        // Skip generic domains
+        const skipDomains = ['reddit', 'quora', 'google', 'youtube', 'twitter', 'facebook', 'linkedin', 'medium', 'wikipedia', 'amazon', 'producthunt'];
+        if (brand.length > 2 && !skipDomains.includes(brand.toLowerCase())) {
+          names.add(brand.charAt(0).toUpperCase() + brand.slice(1));
+        }
+      } catch { /* skip */ }
+    }
+    
+    // Strategy 3: Extract from [SOURCE: url | Title] title portion
     const sourceMatch = item.match(/\[SOURCE:\s*[^\|]+\|\s*([^\]]+)\]/);
     if (sourceMatch) {
-      // The title often contains the competitor name
       const title = sourceMatch[1].trim();
-      // Extract first meaningful word/phrase (skip generic words)
-      const skipWords = ['the', 'a', 'an', 'vs', 'versus', 'top', 'best', 'review', 'reviews', 'pricing', 'alternative', 'alternatives'];
-      const words = title.split(/[\s\-\|:,]+/).filter(w => w.length > 2 && !skipWords.includes(w.toLowerCase()));
-      if (words.length > 0) {
-        // Take first 1-2 capitalized words as potential company name
-        const potentialName = words.slice(0, 2).filter(w => /^[A-Z]/.test(w)).join(' ');
-        if (potentialName.length > 2) names.add(potentialName);
+      const skipWords = ['the', 'a', 'an', 'vs', 'versus', 'top', 'best', 'review', 'reviews', 'pricing', 
+                         'alternative', 'alternatives', 'how', 'what', 'why', 'guide', 'blog', 'news',
+                         'market', 'report', 'analysis', 'comparison', 'and', 'for', 'with', 'your'];
+      const words = title.split(/[\s\-\|:,\/]+/).filter(w => w.length > 2 && !skipWords.includes(w.toLowerCase()));
+      // Look for capitalized words (brand names)
+      for (const word of words) {
+        if (/^[A-Z][a-zA-Z]+$/.test(word) && word.length > 2 && word.length < 20) {
+          names.add(word);
+        }
+      }
+    }
+    
+    // Strategy 4: Look for known competitor name patterns in content
+    // Match patterns like "Supersapiens" or "MyFitnessPal" (CamelCase brand names)
+    const camelCaseMatch = item.match(/\b([A-Z][a-z]+(?:[A-Z][a-z]+)+)\b/g);
+    if (camelCaseMatch) {
+      for (const name of camelCaseMatch) {
+        const skipCamel = ['CrossFit', 'JavaScript', 'TypeScript', 'LinkedIn', 'YouTube', 'Facebook', 'Instagram', 'TikTok', 'WhatsApp'];
+        if (!skipCamel.includes(name) && name.length > 3) {
+          names.add(name);
+        }
       }
     }
   }
   
-  return Array.from(names).slice(0, 5); // Cap at 5 to limit API calls
+  // Filter out generic words that slipped through
+  const genericNames = ['market', 'health', 'fitness', 'nutrition', 'coaching', 'sports', 'athlete', 'training', 'wellness'];
+  const filtered = Array.from(names).filter(n => !genericNames.includes(n.toLowerCase()));
+  
+  return filtered.slice(0, 8); // Cap at 8 to limit API calls
 }
 
 /**
@@ -304,7 +421,7 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
 
   // === DEAD COMPETITOR DETECTION ===
   // Extract competitor names from research data and check if any are defunct
-  const extractedNames = extractCompetitorNames(competitors);
+  const extractedNames = extractCompetitorNames(competitors, intake.competitorUrls || []);
   if (extractedNames.length > 0) {
     console.log(`[Orchestrator] Checking ${extractedNames.length} competitor names for shutdown signals: ${extractedNames.join(', ')}`);
     
@@ -375,7 +492,7 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
     if (!uniqueUrls.has(cleanUrl)) {
       uniqueUrls.add(cleanUrl);
       
-      const quality = scoreSource(cleanUrl, src.title || '', nicheKeywords, src.score);
+      const quality = scoreSource(cleanUrl, src.title || '', nicheKeywords, src.score, intake.geography);
       
       if (quality.reject) {
         rejectedSources.push({

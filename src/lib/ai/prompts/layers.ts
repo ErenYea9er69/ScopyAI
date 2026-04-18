@@ -232,10 +232,27 @@ DEFUNCT COMPETITOR WARNING:
 - A well-funded competitor that failed at the same thesis means the market REJECTED this approach. Do NOT treat their absence as a "market gap".
 - Factor their failure into your saturationScore reasoning and scenarioSimulator.
 
+BIG-COMPANY RETREAT = DANGER SIGNAL:
+- If a major tech company (Apple, Google, Amazon, Meta, Microsoft) RETREATED from this product category, this is a NEGATIVE signal, NOT a positive one.
+- Their retreat means the category is harder to build and monetise than it appears, NOT that competition decreased.
+- If the research data mentions a big-company pullback, increase your aiDisruptionRisk or executionDifficulty scores accordingly and explain WHY they retreated.
+
+SATURATION SCORE METHODOLOGY:
+- saturationScore percentage MUST be based on SPECIFIC EVIDENCE from the research data: competitor count, search volume data, market share distribution, or keyword competition scores.
+- If you cannot cite specific quantitative evidence for your saturation score, set percentage to 0 and reasoning to "Insufficient quantitative data to calculate saturation reliably. [N] competitors found in research data but no market share or search volume data available."
+- Do NOT assign a saturation percentage based on vibes or the existence of adjacent-market competitors. Only DIRECT competitors in the same niche count.
+
+EXECUTION DIFFICULTY SCORE CONSISTENCY (HARD CONSTRAINT):
+- After generating your blockers list, RE-READ every blocker.
+- If ANY blocker contains the words "fatal", "impossible", "exceeds budget", "exceeds total budget", "MHRA", "FDA", "cannot be built", or costs more than the user's stated budget, your executionDifficulty score MUST be ≥ 80.
+- A score below 50 with any fatal blocker is a FORBIDDEN OUTPUT. The system will override it.
+- If the Operator agent would rate this as IMPOSSIBLE, your score must be ≥ 80.
+
 FOUNDER FIT WEIGHTING:
 - If the user checked 4+ founder-fit statements, reduce executionDifficulty score by 15-20 points (they have strong leverage).
 - If the user checked 0-1 statements, increase executionDifficulty score by 10 points (low founder-market fit).
 - Factor specific fit statements: "domain expertise" reduces research costs, "technical advantage" reduces build costs, "experienced pain point" increases conviction.
+- NOTE: Founder fit adjustments are OVERRIDDEN by the consistency constraint above. If fatal blockers exist, the score stays ≥ 80 regardless of founder fit.
 `.trim();
 
   return { system, user };
@@ -290,6 +307,17 @@ DEFUNCT COMPETITOR RULES:
   (b) INCLUDE it in the "failedCompetitors" array with: name, shutdownDate (if known), fundingRaised, reasonForFailure, and lessonForUser.
   (c) In your userCompetitorVerdict, explicitly state that this competitor has shut down and what that means for the user's thesis.
   (d) Do NOT treat a defunct competitor's market absence as a "gap" — it may be a graveyard.
+
+PLATFORM PARTNERSHIP = DIRECT COMPETITOR (CRITICAL):
+- If a company has an EXISTING official partnership with the user's target platform, community, or ecosystem (e.g., CrossFit, a specific gym chain, a sports league, a professional body), that company is a DIRECT COMPETITOR — NOT a distribution opportunity.
+- A platform that has already chosen a metabolic health / nutrition / wellness partner has CLOSED the distribution channel to newcomers.
+- List any platform-partnered companies in the main "competitors" array with a strength: "Has official [Platform] partnership — controls primary distribution channel."
+- Do NOT list platform-partnered competitors in "distributionLeverage" or "marketGaps" as opportunities. They are the OPPOSITE of opportunities.
+
+GEOGRAPHY-SPECIFIC COMPETITOR AVAILABILITY:
+- For EACH competitor, explicitly check: is this competitor available in the user's target geography?
+- If a competitor is already operating in the same country/region as the user, the "market gap" claim for that geography is INVALID.
+- State: "[Competitor] is already available in [geography] at [price]" if this information exists in the research data.
 
 FINANCIAL DATA HONESTY:
 - For competitor revenue/traffic, ONLY use numbers that appear verbatim in the [SOURCE:] data.
@@ -364,6 +392,16 @@ HIDDEN COST COMPLETENESS:
 - A break-even analysis that ignores known costs from upstream layers is INVALID.
 - If the upstream data mentions regulatory costs of $5-20K, those MUST appear in your burn rate scenarios.
 - If the product requires hardware distribution (e.g., CGM sensors at $130/month each), factor per-user hardware costs into LTV calculations.
+
+LTV:CAC VERDICT RULES (HARD CONSTRAINT):
+- If your calculated LTV:CAC ratio is below 3:1, the ltvCacVerdict.verdict MUST state: "STRUCTURALLY NON-VIABLE at current unit economics. Below the 3:1 minimum required for sustainable growth. Each customer acquired costs more to serve than they generate in margin."
+- Do NOT use softening language like "marginal", "risky", or "below recommended". Below 3:1 is a DEATH SPIRAL, not a risk.
+- If LTV:CAC is below 2:1, add to notFound: "Unit economics are fundamentally broken — the business loses money on every customer after factoring COGS."
+
+BURN RATE vs GTM CONSISTENCY:
+- After calculating burn rate scenarios, compare runway against the GTM plan duration from upstream data.
+- If your shortest burn rate scenario (minimal) shows the budget is exhausted BEFORE the GTM plan would complete, you MUST flag this: "BUDGET EXHAUSTION WARNING: Budget runs out at month [X] but GTM plan requires [Y] months. The GTM plan as written is unfundable with the stated budget."
+- Add this contradiction to notFound as a critical limitation.
 
 GOAL TIMELINE REALITY CHECK:
 - If the user's goal timeline is "Revenue in 90 days" but your break-even analysis shows 12+ months, you MUST explicitly flag this contradiction: "The stated 90-day revenue goal is unrealistic given the unit economics. Minimum realistic timeline: [X months]."
@@ -442,21 +480,34 @@ IMPORTANT:
 - GTM costs must reference the user's actual budget. Don't suggest $5k ad spend for someone with $500.
 - futureTrends MUST be derived from the TREND DATA section, not invented.
 
-CONVERSION RATE REALITY ANCHORING:
-- GTM plan conversion rates MUST use industry-realistic benchmarks. Do NOT invent optimistic numbers:
-  * Cold email: 15-25% open rate, 1-5% reply rate, 0.5-2% conversion rate
-  * Cold LinkedIn InMail/DM: 10-25% open rate, 1-3% response rate
-  * Landing page visitor-to-signup: 2-5% conversion
-  * Paid ad CTR: 1-3% (search), 0.5-1.5% (social)
-  * Workshop/webinar attendance from cold invite: 5-15% of invitees
-  * Partnership conversion from cold outreach: 2-8% (NOT 25%)
-- Any conversion rate you use that exceeds these benchmarks MUST include explicit justification.
-- If a GTM step relies on "network effects" or "word of mouth", this only works AFTER a critical mass — it cannot be the primary driver in weeks 1-4.
+CONVERSION RATE REALITY ANCHORING (HARD CAPS — EXCEEDING THESE IS FORBIDDEN):
+- These are MAXIMUM conversion rates. You MUST NOT use any rate above these ceilings:
+  * Cold email/LinkedIn reply rate: MAX 8% (typical: 2-5%)
+  * Cold outreach to business owners (gym owners, box owners): MAX 5% (typical: 1-3%)
+  * Workshop/webinar-to-paid conversion: MAX 10% (typical: 3-8%)
+  * Landing page visitor-to-signup: MAX 5% (typical: 2-4%)
+  * Paid ad CTR: MAX 3% (search), MAX 1.5% (social)
+  * Weekly user retention: MAX 50% for unproven products (typical: 30-40%)
+  * Partnership conversion from cold outreach: MAX 8% (typical: 2-5%)
+- These are ABSOLUTE CEILINGS. Using a rate above these without peer-reviewed evidence is a FORBIDDEN OUTPUT.
+- If your GTM plan requires higher conversion rates to achieve its targets, the targets are wrong — reduce them.
+
+GTM TOTAL SPEND CAP:
+- Sum ALL costs across your entire GTM plan (every week's cost + validation roadmap costs).
+- If this total exceeds the user's stated budget, STOP and restructure.
+- A GTM plan that costs more than the user has is fiction. List the total GTM cost explicitly.
+- Hardware subsidies, sensor costs, and sample products count as GTM costs.
 
 ANTI-WISHFUL-THINKING RULE:
 - Each GTM week must include both a TARGET outcome and a PESSIMISTIC scenario.
-- Example: "Target: 5 box partnerships. Pessimistic: 1 partnership (industry cold-outreach conversion is 2-8%). Fallback if pessimistic: [specific action]."
+- The PESSIMISTIC scenario must use the LOWER END of the conversion rate ceilings above.
+- Example: "Target: 5 partnerships at 5% conversion from 100 outreach. Pessimistic: 1-2 partnerships at 2% conversion. Fallback if pessimistic: [specific action]."
 - If the GTM plan depends on distributor partnerships, supplier negotiations, or API access that the user doesn't currently have, flag the lead time: "Partnership negotiations typically take 3-6 months. Budget accordingly."
+
+DISTRIBUTION LEVERAGE HONESTY:
+- Do NOT list platform-partnered competitors as "distribution leverage" opportunities.
+- If a platform (e.g., CrossFit) has already chosen an official partner for this category, that channel is CLOSED to the user.
+- Only list distribution levers that the user can actually access without requiring permission from a platform that has already chosen a competitor.
 `.trim();
 
   return { system, user };
@@ -600,6 +651,12 @@ ${researchBlock([...research.painPoints, ...research.competitors, ...research.ma
 
 Make each module actionable and specific to how a "${archetype}" with THIS budget, timeline, and stage would execute in this niche.
 Do NOT generate generic advice. Reference the user's specific assets and constraints.
+
+API AND PARTNERSHIP AVAILABILITY VERIFICATION:
+- Do NOT list any API as a "distribution leverage" or "partnership opportunity" unless the research data contains evidence of a PUBLIC commercial API with documented pricing and access instructions.
+- GitHub benchmark repos, research code, internal tools, and academic implementations are NOT public commercial APIs.
+- If no public API documentation was found in research, state: "API not publicly available — partnership opportunity is speculative and should not be relied upon in GTM planning."
+- If a company is listed as BOTH a threat (in gorilla competitors / AI disruption) AND a partnership opportunity, that is a CONTRADICTION. A company that threatens to commoditise your value proposition will not partner with you to preserve it. Choose one classification.
 `.trim();
 
   return { system, user };

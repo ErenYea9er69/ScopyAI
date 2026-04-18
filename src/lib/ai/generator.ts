@@ -174,23 +174,27 @@ export async function generateReport(
     const batch2Context = buildBatch2Summary(report.layers);
     const fullContext = batch1Context + '\n' + batch2Context;
 
-    // ===== STEP 4: Layer 8 (persona-specific) =====
+    // ===== STEP 4b: Post-Generation Validation =====
+    // Server-side enforcement of constraints the LLM keeps violating
+    validateLayerConsistency(report);
+
+    // ===== STEP 5: Layer 8 (persona-specific) =====
     await runLayer('layer8', async () => {
       const p = layer8Prompt(intake.niche, persona.archetype as Archetype, research, userContext, intake.geography, fullContext);
       const result = await generateStructuredOutput(p.system, p.user, layer8Schema, MODELS.REASONING);
       report.layers.layer8 = result;
     }, onProgress);
 
-    // ===== STEP 5: Tri-Agent Debate =====
+    // ===== STEP 6: Tri-Agent Debate =====
     onProgress?.({ step: 'debate', status: 'started' });
-    console.log('[Generator] Step 5: Running Tri-Agent Debate...');
+    console.log('[Generator] Step 6: Running Tri-Agent Debate...');
 
     try {
       const layerSummary = buildLayerSummary(report.layers);
       report.debate = await runTriAgentDebate(intake.niche, research, userContext, layerSummary);
       onProgress?.({ step: 'debate', status: 'complete' });
 
-      // ===== STEP 5b: Reconcile Report Based on Debate =====
+      // ===== STEP 6b: Reconcile Report Based on Debate =====
       reconcileReport(report);
 
     } catch (err) {
@@ -485,4 +489,85 @@ function reconcileReport(report: FullReport): void {
   }
 
   console.log(`[Reconciler] Applied ${warnings.length} warnings to ${Object.keys(layers).length} layers. Final compositeScore: ${report.debate.compositeScore}`);
+}
+
+/**
+ * Post-generation validation — server-side enforcement of constraints
+ * the LLM keeps violating despite prompt instructions.
+ *
+ * v3: Two critical checks:
+ *   1. executionDifficulty score vs blocker text consistency
+ *   2. Cross-layer budget exhaustion detection
+ */
+function validateLayerConsistency(report: FullReport): void {
+  // === CHECK 1: executionDifficulty score must match blocker severity ===
+  if (report.layers.layer3) {
+    const l3 = report.layers.layer3;
+    const score = l3.executionDifficulty?.score ?? 0;
+    const blockers = l3.executionDifficulty?.blockers || [];
+    
+    const FATAL_KEYWORDS = [
+      'fatal', 'impossible', 'exceeds budget', 'exceeds total budget',
+      'cannot be built', 'mhra', 'fda', 'hipaa', 'fatal execution blocker',
+      'regulatory compliance', 'medical device', 'exceeds', 'unfundable',
+    ];
+    
+    const hasFatalBlocker = blockers.some((b: string) => 
+      FATAL_KEYWORDS.some(kw => b.toLowerCase().includes(kw))
+    );
+    
+    if (hasFatalBlocker && score < 50) {
+      console.warn(`[Validator] OVERRIDE: executionDifficulty score ${score} is inconsistent with fatal blockers. Overriding to 85.`);
+      console.warn(`[Validator] Fatal blockers found: ${blockers.filter((b: string) => FATAL_KEYWORDS.some(kw => b.toLowerCase().includes(kw))).join(' | ')}`);
+      
+      l3.executionDifficulty.score = 85;
+      
+      // Add warning to notFound
+      if (!l3.notFound) l3.notFound = [];
+      l3.notFound.push(
+        `⚠️ SCORE OVERRIDE: Original executionDifficulty score (${score}/100) was inconsistent with fatal blockers listed in the same section. Server-side correction applied to ${l3.executionDifficulty.score}/100.`
+      );
+    }
+  }
+
+  // === CHECK 2: Cross-layer budget consistency ===
+  if (report.layers.layer5 && report.layers.layer6) {
+    const l5 = report.layers.layer5;
+    const l6 = report.layers.layer6;
+    
+    // Extract shortest runway from burn rate scenarios
+    const burnScenarios = l5.burnRateScenarios || [];
+    let shortestRunwayMonths: number | null = null;
+    
+    for (const scenario of burnScenarios) {
+      const runway = scenario.runway || '';
+      // Parse runway strings like "1.8 months", "2 months", "0 months"
+      const runwayMatch = runway.match(/([\d.]+)\s*month/i);
+      if (runwayMatch) {
+        const months = parseFloat(runwayMatch[1]);
+        if (shortestRunwayMonths === null || months < shortestRunwayMonths) {
+          shortestRunwayMonths = months;
+        }
+      }
+    }
+    
+    // Count GTM plan weeks and convert to months
+    const gtmWeeks = l6.gtmPlan?.length || 0;
+    const gtmMonths = gtmWeeks / 4;
+    
+    if (shortestRunwayMonths !== null && shortestRunwayMonths < gtmMonths) {
+      const warning = `🚫 BUDGET-GTM CONTRADICTION: Shortest burn rate scenario shows ${shortestRunwayMonths} months runway, but GTM plan requires ${gtmMonths} months (${gtmWeeks} weeks). The GTM plan is unfundable with the stated budget.`;
+      
+      console.warn(`[Validator] ${warning}`);
+      
+      // Append to both layers
+      if (!l5.notFound) l5.notFound = [];
+      if (!l6.notFound) l6.notFound = [];
+      
+      if (!l5.notFound.includes(warning)) l5.notFound.push(warning);
+      if (!l6.notFound.includes(warning)) l6.notFound.push(warning);
+    }
+  }
+
+  console.log('[Validator] Post-generation validation complete.');
 }
