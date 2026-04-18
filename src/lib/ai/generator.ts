@@ -31,7 +31,7 @@ import { gatherIntelligence, type ResearchData } from '../research/orchestrator'
 import {
   layer1Schema, layer2Schema, layer3Schema, layer4Schema,
   layer5Schema, layer6Schema, layer7Schema, layer8Schema,
-  type FullReport,
+  type FullReport, type LayerReliabilityScore,
 } from '../../types/report';
 
 export type IntakeData = {
@@ -85,6 +85,12 @@ export async function generateReport(
     report.sources = research.sources;
 
     onProgress?.({ step: 'research', status: 'complete' });
+
+    // ===== STEP 1b: Pre-Report Complexity-Budget Mismatch Detection =====
+    const complexityWarning = detectComplexityBudgetMismatch(intake);
+    if (complexityWarning) {
+      console.warn(`[Generator] ${complexityWarning}`);
+    }
 
     // ===== STEP 2: Persona Classification =====
     onProgress?.({ step: 'persona', status: 'started' });
@@ -172,13 +178,22 @@ export async function generateReport(
 
     // --- Build Batch 2 context for Layer 8 ---
     const batch2Context = buildBatch2Summary(report.layers);
-    const fullContext = batch1Context + '\n' + batch2Context;
 
     // ===== STEP 4b: Post-Generation Validation =====
     // Server-side enforcement of constraints the LLM keeps violating
     validateLayerConsistency(report);
 
-    // ===== STEP 5: Layer 8 (persona-specific) =====
+    // ===== STEP 4c: Compute Layer Reliability =====
+    computeLayerReliability(report);
+
+    // ===== STEP 4d: Extract Fatal Flags =====
+    extractFatalFlags(report);
+
+    // ===== STEP 4e: Build full context (inject complexity warning if present) =====
+    let fullContext = batch1Context + '\n' + batch2Context;
+    if (complexityWarning) {
+      fullContext = `\n⚠️ COMPLEXITY-BUDGET MISMATCH: ${complexityWarning}\n` + fullContext;
+    }
     await runLayer('layer8', async () => {
       const p = layer8Prompt(intake.niche, persona.archetype as Archetype, research, userContext, intake.geography, fullContext);
       const result = await generateStructuredOutput(p.system, p.user, layer8Schema, MODELS.REASONING);
@@ -196,6 +211,12 @@ export async function generateReport(
 
       // ===== STEP 6b: Reconcile Report Based on Debate =====
       reconcileReport(report);
+
+      // ===== STEP 6c: Generate Verdict =====
+      generateVerdict(report);
+
+      // ===== STEP 6d: Apply Confidence Gates =====
+      applyConfidenceGates(report);
 
     } catch (err) {
       console.error('[Generator] Debate failed:', err);
@@ -574,4 +595,239 @@ function validateLayerConsistency(report: FullReport): void {
   }
 
   console.log('[Validator] Post-generation validation complete.');
+}
+
+/**
+ * v5: Compute per-layer reliability scores based on confidence field distribution.
+ * Score formula: (high×3 + medium×2 + low×1) / (total×3) × 100
+ */
+function computeLayerReliability(report: FullReport): void {
+  const reliability: Record<string, LayerReliabilityScore> = {};
+
+  for (const [layerName, layer] of Object.entries(report.layers)) {
+    if (!layer) continue;
+
+    let high = 0, medium = 0, low = 0;
+
+    const countConfidence = (obj: any): void => {
+      if (!obj || typeof obj !== 'object') return;
+      if (Array.isArray(obj)) { obj.forEach(countConfidence); return; }
+      for (const key of Object.keys(obj)) {
+        if (key === 'confidence') {
+          const val = String(obj[key]).toLowerCase();
+          if (val === 'high') high++;
+          else if (val === 'medium') medium++;
+          else low++;
+        } else if (typeof obj[key] === 'object') {
+          countConfidence(obj[key]);
+        }
+      }
+    };
+
+    countConfidence(layer);
+    const total = high + medium + low;
+    const score = total > 0 ? Math.round(((high * 3 + medium * 2 + low * 1) / (total * 3)) * 100) : 0;
+    const verdict: 'RELIABLE' | 'DIRECTIONAL' | 'SPECULATIVE' = score >= 70 ? 'RELIABLE' : score >= 40 ? 'DIRECTIONAL' : 'SPECULATIVE';
+
+    reliability[layerName] = { totalDataPoints: total, highConfidence: high, mediumConfidence: medium, lowConfidence: low, score, verdict };
+  }
+
+  report.layerReliability = reliability;
+
+  const avgScore = Object.values(reliability).length > 0
+    ? Math.round(Object.values(reliability).reduce((s, r) => s + r.score, 0) / Object.values(reliability).length)
+    : 0;
+  console.log(`[Reliability] Report-level reliability: ${avgScore}/100. Per-layer: ${Object.entries(reliability).map(([k, v]) => `${k}=${v.score}(${v.verdict})`).join(', ')}`);
+}
+
+/**
+ * v5: Extract fatal flags from all notFound arrays and promote to report.fatalFlags.
+ */
+function extractFatalFlags(report: FullReport): void {
+  const FATAL_KEYWORDS = ['IMPOSSIBLE', 'NON-VIABLE', 'KILL', 'FATAL', 'BLOCKED', 'EXECUTION IMPOSSIBLE', 'BUDGET-GTM CONTRADICTION', 'SCORE OVERRIDE', 'STRUCTURALLY NON-VIABLE'];
+  const fatalFlags: string[] = [];
+
+  for (const [, layer] of Object.entries(report.layers)) {
+    if (!layer) continue;
+    const notFound = (layer as any).notFound as string[] | undefined;
+    if (!notFound) continue;
+
+    for (const entry of notFound) {
+      const upper = entry.toUpperCase();
+      if (FATAL_KEYWORDS.some(kw => upper.includes(kw))) {
+        if (!fatalFlags.includes(entry)) {
+          fatalFlags.push(entry);
+        }
+      }
+    }
+  }
+
+  report.fatalFlags = fatalFlags;
+  if (fatalFlags.length > 0) {
+    console.warn(`[FatalFlags] Extracted ${fatalFlags.length} fatal flags from report layers.`);
+  }
+}
+
+/**
+ * v5: Generate top-level verdict based on debate scores and fatal flags.
+ */
+function generateVerdict(report: FullReport): void {
+  if (!report.debate) return;
+
+  const { operator, cynic, builder, compositeScore } = report.debate;
+  const cynicSignal = cynic.signal?.toUpperCase() || '';
+  const operatorSignal = operator.signal?.toUpperCase() || '';
+  const fatalCount = report.fatalFlags?.length || 0;
+
+  let label: 'GO' | 'PROCEED_WITH_CAUTION' | 'DO_NOT_PROCEED';
+  let reason: string;
+  let recommendedAction: string;
+
+  if (operator.score >= 85 || operatorSignal.includes('IMPOSSIBLE')) {
+    label = 'DO_NOT_PROCEED';
+    reason = `Execution rated IMPOSSIBLE (${operator.score}/100). The idea cannot be built with the stated budget, skills, and timeline.`;
+    recommendedAction = 'Pivot to a simpler version that removes hardware dependencies, regulatory requirements, and API access barriers. Validate demand with zero-tech manual service first.';
+  } else if (compositeScore < 30 || cynicSignal.includes('KILL')) {
+    label = 'DO_NOT_PROCEED';
+    reason = `Composite score ${compositeScore}/100 — the adversarial analysis found fundamental viability problems. ${cynic.keyPoints?.[0] || ''}`;
+    recommendedAction = 'Review the Cynic analysis and pivot options. The current formulation has structural flaws that cannot be fixed with iteration.';
+  } else if (compositeScore <= 50 || operator.score >= 65 || fatalCount >= 3) {
+    label = 'PROCEED_WITH_CAUTION';
+    reason = `Composite score ${compositeScore}/100 with ${fatalCount} fatal flag(s). Significant risks identified but the idea may be viable with modifications.`;
+    recommendedAction = 'Resolve the top blockers listed below before investing time or money. Complete primary customer research (20+ conversations) first.';
+  } else {
+    label = 'GO';
+    reason = `Composite score ${compositeScore}/100. Market opportunity identified with manageable execution risks.`;
+    recommendedAction = 'Begin with the validation roadmap in Layer 6. Target first 5 paying customers within 30 days using the recommended GTM channels.';
+  }
+
+  // Top blockers from fatal flags
+  const topBlockers = (report.fatalFlags || []).slice(0, 3).map(f => {
+    // Truncate long flags for the verdict block
+    return f.length > 200 ? f.substring(0, 200) + '...' : f;
+  });
+
+  // Add operator key points if not enough blockers
+  if (topBlockers.length < 3 && operator.keyPoints) {
+    for (const kp of operator.keyPoints) {
+      if (topBlockers.length >= 3) break;
+      if (!topBlockers.some(b => b.includes(kp.substring(0, 30)))) {
+        topBlockers.push(kp);
+      }
+    }
+  }
+
+  report.verdict = { label, reason, topBlockers, recommendedAction };
+  console.log(`[Verdict] ${label}: ${reason}`);
+}
+
+/**
+ * v5: Apply confidence-gated content suppression.
+ * Locks GTM/moat/revenue sections when data quality is too low.
+ */
+function applyConfidenceGates(report: FullReport): void {
+  const suppression = {
+    gtmPlanSuppressed: false,
+    moatStrategiesSuppressed: false,
+    revenueProjectionsSuppressed: false,
+    reason: '',
+  };
+
+  const reasons: string[] = [];
+
+  // === Gate 1: GTM Plan requires validated buyer data ===
+  if (report.layers.layer1) {
+    const l1 = report.layers.layer1;
+    const l1Reliability = report.layerReliability?.layer1;
+
+    // Count medium+ confidence pain points
+    const validatedPainPoints = l1.painPoints?.filter(p => p.confidence !== 'low').length || 0;
+    // Check for verbatim buyer quotes
+    const hasBuyerQuotes = (l1.buyerLanguage?.length || 0) > 0 &&
+      !l1.buyerLanguage?.every(q => q.quote.toLowerCase().includes('no direct quotes'));
+
+    if (validatedPainPoints < 3 && !hasBuyerQuotes) {
+      suppression.gtmPlanSuppressed = true;
+      reasons.push('GTM BLOCKED: Fewer than 3 validated pain points and no verbatim buyer quotes.');
+
+      // Suppress GTM plan content
+      if (report.layers.layer6) {
+        if (!report.layers.layer6.notFound) report.layers.layer6.notFound = [];
+        report.layers.layer6.notFound.unshift(
+          '🚫 GTM PLAN RELIABILITY WARNING: This plan was generated with insufficient validated buyer data. ' +
+          `Only ${validatedPainPoints} pain points have medium+ confidence, and ${hasBuyerQuotes ? '' : 'no '}verbatim buyer quotes were found. ` +
+          'Complete primary research (20+ customer conversations) before executing this plan.'
+        );
+      }
+    }
+  }
+
+  // === Gate 2: Moat strategies require product-market evidence ===
+  if (report.layers.layer2) {
+    const tamConfidence = report.layers.layer2.tam?.confidence;
+    const tamRange = report.layers.layer2.tam?.range?.toLowerCase() || '';
+    const isTamMissing = tamConfidence === 'low' && (tamRange.includes('insufficient') || tamRange.includes('no data'));
+
+    if (isTamMissing) {
+      suppression.moatStrategiesSuppressed = true;
+      reasons.push('MOAT BLOCKED: TAM is unknown — moat strategies without market size validation are speculative.');
+
+      if (report.layers.layer7) {
+        if (!report.layers.layer7.notFound) report.layers.layer7.notFound = [];
+        report.layers.layer7.notFound.unshift(
+          '🚫 MOAT ANALYSIS WARNING: TAM data is insufficient. Moat strategies are speculative without a validated market size. ' +
+          'Determine addressable market before investing in competitive moats.'
+        );
+      }
+    }
+  }
+
+  // === Gate 3: Revenue projections require Operator sanity ===
+  if (report.debate?.operator && report.debate.operator.score >= 85) {
+    suppression.revenueProjectionsSuppressed = true;
+    reasons.push(`REVENUE BLOCKED: Operator scored ${report.debate.operator.score}/100 IMPOSSIBLE.`);
+
+    if (report.layers.layer5) {
+      if (!report.layers.layer5.notFound) report.layers.layer5.notFound = [];
+      report.layers.layer5.notFound.unshift(
+        `🚫 REVENUE PROJECTIONS ARE THEORETICAL ONLY: Operator analysis scored execution as ${report.debate.operator.score}/100 (IMPOSSIBLE). ` +
+        'Revenue figures below assume constraints are resolved. Do not use for budgeting or fundraising.'
+      );
+    }
+  }
+
+  suppression.reason = reasons.join(' | ');
+  report.contentSuppressed = suppression;
+
+  if (reasons.length > 0) {
+    console.warn(`[ConfidenceGates] ${reasons.length} gate(s) triggered: ${reasons.join('; ')}`);
+  }
+}
+
+/**
+ * v5: Pre-report complexity-budget mismatch detection.
+ * Scans niche description for complexity indicators and compares to budget.
+ */
+function detectComplexityBudgetMismatch(intake: IntakeData): string | null {
+  const COMPLEXITY_KEYWORDS = [
+    'cgm', 'glucose', 'medical', 'clinical', 'diagnostic', 'fda', 'mhra',
+    'hardware', 'sensor', 'wearable', 'api integration', 'blockchain',
+    'hipaa', 'gdpr compliance', 'medical device', 'regulated',
+  ];
+
+  const nicheLower = intake.niche.toLowerCase();
+  const matchedKeywords = COMPLEXITY_KEYWORDS.filter(kw => nicheLower.includes(kw));
+
+  if (matchedKeywords.length === 0) return null;
+
+  // Parse budget — extract numbers
+  const budgetStr = intake.budget || '0';
+  const budgetMatch = budgetStr.match(/[\d,]+/g);
+  const budget = budgetMatch ? Math.max(...budgetMatch.map(b => parseFloat(b.replace(/,/g, '')))) : 0;
+
+  if (budget < 20000 && matchedKeywords.length >= 1) {
+    return `Your idea contains complexity indicators (${matchedKeywords.join(', ')}) that typically require $50,000-$200,000+ to bring to market. Your stated budget is ${budgetStr}. The report will flag execution impossibility throughout.`;
+  }
+
+  return null;
 }

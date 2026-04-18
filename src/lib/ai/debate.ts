@@ -248,5 +248,21 @@ export async function runTriAgentDebate(
   // Resolve the debate
   const resolved = await resolveDebate(niche, builder, cynic, operator, layerSummary);
 
+  // v5: Operator-weighted composite override
+  // When operator >= 85, equal weighting allows Builder to keep composite artificially high
+  // Reweight: Operator 60%, Cynic 30%, Builder 10%
+  if (operator.score >= 85) {
+    const reweighted = Math.round(
+      (100 - operator.score) * 0.6 +  // Invert operator (high = bad)
+      (100 - cynic.score) * 0.3 +       // Invert cynic (high = bad)
+      builder.score * 0.1               // Builder stays positive
+    );
+    const oldScore = resolved.compositeScore;
+    resolved.compositeScore = Math.min(resolved.compositeScore, reweighted);
+    if (resolved.compositeScore !== oldScore) {
+      console.warn(`[Debate] Operator override: composite reweighted from ${oldScore} to ${resolved.compositeScore} (operator=${operator.score}, reweighted formula applied)`);
+    }
+  }
+
   return resolved;
 }

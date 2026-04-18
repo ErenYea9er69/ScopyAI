@@ -149,11 +149,32 @@ Use the user's unique insight and founder fit to find pivots where they have an 
             adjustedSaturation = Math.max(10, saturation - 5);
           }
 
+          // v5: Extract actual competitor NAMES from results
+          const competitorNames: string[] = [];
+          if (compRes?.results) {
+            for (const r of compRes.results) {
+              // Extract domain name as competitor identifier
+              try {
+                const domain = new URL(r.url).hostname.replace('www.', '');
+                const name = r.title?.split(/[–\-|:]/)[0]?.trim() || domain;
+                if (name && !competitorNames.includes(name) && competitorNames.length < 7) {
+                  competitorNames.push(name);
+                }
+              } catch { /* skip invalid URLs */ }
+            }
+          }
+
+          // v5: Budget compatibility check
+          const COMPLEXITY_SIGNALS = ['api', 'hardware', 'sensor', 'cgm', 'medical', 'regulatory', 'clinical', 'device'];
+          const pivotLower = pivot.title.toLowerCase() + ' ' + pivot.description.toLowerCase();
+          const hasComplexity = COMPLEXITY_SIGNALS.some(kw => pivotLower.includes(kw));
+          const budgetCompatible = !hasComplexity; // If no complexity signals, budget-compatible
+
           return {
             ...pivot,
             newSaturation: adjustedSaturation,
             reasoning: hasRealData
-              ? `${pivot.reasoning} [Validated: ${sourceCount} sources found, ${realCompetitorCount} direct competitors identified in ${geography}]`
+              ? `${pivot.reasoning} [Validated: ${sourceCount} sources. Named competitors: ${competitorNames.length > 0 ? competitorNames.join(', ') : 'none identified'}. Budget compatible: ${budgetCompatible ? 'YES' : 'NO — contains hardware/API/regulatory dependencies'}]`
               : `${pivot.reasoning} [Unvalidated: insufficient Tavily data to confirm]`,
           };
         } catch (err) {

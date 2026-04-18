@@ -99,7 +99,7 @@ export const layer3Schema = z.object({
     risk: z.string(),
   }),
   saturationScore: z.object({
-    percentage: z.number().min(0).max(100),
+    percentage: z.number().min(-1).max(100),
     reasoning: z.string(),
   }),
   legalMatrix: z.array(z.object({
@@ -252,6 +252,31 @@ export const autoPivotSchema = z.object({
 });
 export type AutoPivotResult = z.infer<typeof autoPivotSchema>;
 
+// -- Verdict & Intelligence Metadata --
+
+export interface ReportVerdict {
+  label: 'GO' | 'PROCEED_WITH_CAUTION' | 'DO_NOT_PROCEED';
+  reason: string;
+  topBlockers: string[];
+  recommendedAction: string;
+}
+
+export interface LayerReliabilityScore {
+  totalDataPoints: number;
+  highConfidence: number;
+  mediumConfidence: number;
+  lowConfidence: number;
+  score: number; // 0-100
+  verdict: 'RELIABLE' | 'DIRECTIONAL' | 'SPECULATIVE';
+}
+
+export interface ContentSuppression {
+  gtmPlanSuppressed: boolean;
+  moatStrategiesSuppressed: boolean;
+  revenueProjectionsSuppressed: boolean;
+  reason: string;
+}
+
 // -- Full Report --
 
 export interface FullReport {
@@ -273,4 +298,9 @@ export interface FullReport {
   autoPivot?: AutoPivotResult;
   sources: { url: string; title: string; confidence: ConfidenceLevel }[];
   generatedAt: string;
+  // v5: Intelligence metadata
+  verdict?: ReportVerdict;
+  fatalFlags?: string[];
+  layerReliability?: Record<string, LayerReliabilityScore>;
+  contentSuppressed?: ContentSuppression;
 }

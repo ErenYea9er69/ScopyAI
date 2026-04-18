@@ -183,6 +183,17 @@ DECLINE SIGNAL CHECK:
 - If any research data contains [⚠️ DECLINE SIGNAL] tags, you MUST factor these into your trend trajectory and market timing verdict.
 - A declining market with shrinking participation is NOT "growing" regardless of other signals.
 - If decline signals conflict with growth signals, set trendTrajectory.direction to "stable" at most, explain the conflict, and note it in notFound.
+
+BOTTOM-UP TAM FALLBACK (MANDATORY when no market research reports exist):
+- If ZERO verified market research reports are found in the research data, you MUST compute a bottom-up TAM estimate.
+- Step 1: Extract participation/population numbers from research (e.g., sport registrations, platform users, demographic data).
+- Step 2: Apply geographic share (e.g., UK = X% of global), demographic filter (e.g., age 40+ = Y%), and willingness-to-pay filter (typically 5-15% for niche products).
+- Step 3: Calculate: Total Relevant Population × Geographic Share × Demographic Match × WTP Rate × Annual Price = TAM estimate.
+- Step 4: Show the funnel transparently with ALL assumptions visible.
+- Label clearly: "TAM estimated via bottom-up proxy calculation. Confidence: medium."
+- Example: "344K CrossFit Open athletes → 2.5% UK share (~8,600) → 25% Masters 40+ (~2,150) → 15% WTP (~320) → @ £300/yr = ~£96K max TAM"
+- CRITICAL: If bottom-up TAM < £500K, add to notFound: "⚠️ MICRO-NICHE: Bottom-up TAM estimate is below £500K — insufficient for standalone SaaS business at standard VC return expectations. Viable only as lifestyle/solo operator business."
+- Do NOT output "Insufficient data" — ALWAYS produce at least a bottom-up estimate.
 `.trim();
 
   return { system, user };
@@ -263,6 +274,13 @@ EXECUTION DIFFICULTY SCORE CONSISTENCY (HARD CONSTRAINT):
 - If ANY blocker contains the words "fatal", "impossible", "exceeds budget", "exceeds total budget", "MHRA", "FDA", "cannot be built", or costs more than the user's stated budget, your executionDifficulty score MUST be ≥ 80.
 - A score below 50 with any fatal blocker is a FORBIDDEN OUTPUT. The system will override it.
 - If the Operator agent would rate this as IMPOSSIBLE, your score must be ≥ 80.
+
+REGULATORY COST REALITY CHECK:
+- UK MHRA Class II medical device classification: £30,000-£100,000+ and 12-24 months minimum for first-time applicant (NOT £3,000-£8,000).
+- Requires: clinical evidence, Conformity Assessment, UK Responsible Person, MHRA registration.
+- US FDA 510(k): $50,000-$200,000+ and 6-18 months.
+- If the idea involves health claims (inflammation management, recovery optimization, metabolic coaching), state: "MHRA pre-market review is PROBABLE, not just possible."
+- These costs are NON-NEGOTIABLE line items. They cannot be deferred to "later" — marketing with health claims before MHRA review risks enforcement action.
 
 FOUNDER FIT WEIGHTING:
 - If the user checked 4+ founder-fit statements, reduce executionDifficulty score by 15-20 points (they have strong leverage).
@@ -530,6 +548,14 @@ DISTRIBUTION LEVERAGE HONESTY:
 - Do NOT list platform-partnered competitors as "distribution leverage" opportunities.
 - If a platform (e.g., CrossFit) has already chosen an official partner for this category, that channel is CLOSED to the user.
 - Only list distribution levers that the user can actually access without requiring permission from a platform that has already chosen a competitor.
+
+CHANNEL PARTNERSHIP CONFLICT CHECK (CRITICAL):
+- For EACH GTM channel you recommend, check if the competitor data contains [🏷️ PLATFORM PARTNER] tags for companies that have official partnerships with that channel's platform.
+- If yes, you MUST:
+  (a) Downgrade that channel's effectiveness rating to "LOW — partnership conflict".
+  (b) Add to channelMap entry: "⚠️ PARTNERSHIP CONFLICT: [Platform] has an official partnership with [Competitor] as of [date]. This channel is likely locked to new entrants."
+  (c) Do NOT rate a partnership-locked channel as "high" or even "medium" effectiveness.
+- If the user's PRIMARY intended acquisition channel is locked by a platform partnership, this is a FATAL GTM FINDING. Add to notFound: "🚫 FATAL GTM: Primary distribution channel [channel] is locked by official [Platform]-[Competitor] partnership."
 `.trim();
 
   return { system, user };

@@ -113,6 +113,7 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
                   color={lc.color}
                   data={layerData}
                   notFound={(layerData as any)?.notFound}
+                  reliability={report.layerReliability?.[lc.key]}
                 />
               );
             })}
