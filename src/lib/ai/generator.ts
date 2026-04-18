@@ -27,12 +27,12 @@ import {
   layer7Prompt,
   layer8Prompt,
 } from './prompts/layers';
-import { gatherIntelligence, type ResearchData } from '@/lib/research/orchestrator';
+import { gatherIntelligence, type ResearchData } from '../research/orchestrator';
 import {
   layer1Schema, layer2Schema, layer3Schema, layer4Schema,
   layer5Schema, layer6Schema, layer7Schema, layer8Schema,
   type FullReport,
-} from '@/types/report';
+} from '../../types/report';
 
 export type IntakeData = {
   niche: string;

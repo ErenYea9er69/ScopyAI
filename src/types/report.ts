@@ -243,6 +243,7 @@ export const pivotOptionSchema = z.object({
   executionFit: z.string(),
   reasoning: z.string(),
 });
+export type PivotOption = z.infer<typeof pivotOptionSchema>;
 
 export const autoPivotSchema = z.object({
   triggered: z.boolean(),

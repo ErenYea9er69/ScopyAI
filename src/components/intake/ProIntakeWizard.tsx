@@ -162,7 +162,7 @@ export function ProIntakeWizard() {
         if (res.status === 402) {
           throw new Error('You have run out of credits. Please upgrade your plan.');
         }
-        throw new Error(data.error || 'Failed to start generation');
+        throw new Error(data.details ? `Invalid intake data: ${JSON.stringify(data.details)}` : (data.error || 'Failed to start generation'));
       }
 
       router.push(`/report/${data.reportId}`);
@@ -246,9 +246,9 @@ export function ProIntakeWizard() {
                   className="bg-surface-2 border border-border-accent rounded-[12px] p-2.5 px-3.5 text-text text-[14px] outline-none w-full focus:border-accent/40 focus:bg-surface-3 transition-colors"
                   placeholder="Search countries or regions..."
                   value={geoFilter}
-                  onChange={e => { setGeoFilter(e.target.value); setForm({...form, geo: ''}); }}
+                  onChange={e => { setGeoFilter(e.target.value); setForm({...form, geo: e.target.value}); }}
                 />
-                {(geoFilter || !form.geo) && (
+                {(geoFilter && geoFilter !== form.geo) && (
                   <div className="max-h-[160px] overflow-y-auto bg-surface-2 border border-border-accent rounded-[12px] mt-1">
                     {filteredGeos.map(g => (
                       <div

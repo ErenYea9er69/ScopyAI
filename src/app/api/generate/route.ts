@@ -16,9 +16,9 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // Validations
     const parsed = intakeSchema.safeParse(body);
     if (!parsed.success) {
+      console.error('[API /generate] Zod validation failed:', parsed.error.flatten());
       return NextResponse.json(
         { error: 'Invalid intake data', details: parsed.error.flatten() },
         { status: 400 }

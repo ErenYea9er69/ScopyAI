@@ -10,9 +10,9 @@
  */
 
 import { generateStructuredOutput, MODELS } from './client';
-import { autoPivotSchema, type AutoPivotResult } from '@/types/report';
-import type { ResearchData } from '@/lib/research/orchestrator';
-import { searchMarket, searchCompetitors } from '@/lib/research/tavily';
+import { autoPivotSchema, type AutoPivotResult, type PivotOption } from '../../types/report';
+import type { ResearchData } from '../research/orchestrator';
+import { searchMarket, searchCompetitors } from '../research/tavily';
 
 export function shouldTriggerPivot(saturation: number, cynicScore: number): boolean {
   return saturation > 70 || cynicScore > 80;
@@ -111,13 +111,13 @@ Use the user's unique insight and founder fit to find pivots where they have an 
 `.trim();
 
   try {
-    const result = await generateStructuredOutput(system, user, autoPivotSchema, MODELS.REASONING);
+    const result = await generateStructuredOutput<AutoPivotResult>(system, user, autoPivotSchema, MODELS.REASONING);
 
     // --- Validate pivots with Tavily ---
     console.log(`[Auto-Pivot] Validating ${result.pivots.length} pivot ideas with Tavily...`);
 
     const validatedPivots = await Promise.all(
-      result.pivots.map(async (pivot) => {
+      result.pivots.map(async (pivot: any) => {
         try {
           const [marketRes, compRes] = await Promise.all([
             searchMarket(pivot.title, geography),

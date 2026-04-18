@@ -10,8 +10,8 @@
  */
 
 import { generateStructuredOutput, MODELS } from './client';
-import { agentVerdictSchema, debateResultSchema, type DebateResult } from '@/types/report';
-import type { ResearchData } from '@/lib/research/orchestrator';
+import { agentVerdictSchema, debateResultSchema, type DebateResult, type AgentVerdict } from '../../types/report';
+import type { ResearchData } from '../research/orchestrator';
 
 function researchSummary(research: ResearchData): string {
   return [
@@ -62,7 +62,7 @@ Find the strongest possible case for building in this niche. Be specific.
 Reference the report claims above — which ones support a GO signal?
 `.trim();
 
-  return generateStructuredOutput(system, user, agentVerdictSchema, MODELS.REASONING);
+  return generateStructuredOutput<AgentVerdict>(system, user, agentVerdictSchema, MODELS.REASONING);
 }
 
 // ========== CYNIC AGENT ==========
@@ -105,7 +105,7 @@ Be ruthless. Name specific threats. Assume the worst case.
 For each report claim above, ask: "Is this supported by the research data, or did the AI fabricate it?"
 `.trim();
 
-  return generateStructuredOutput(system, user, agentVerdictSchema, MODELS.REASONING);
+  return generateStructuredOutput<AgentVerdict>(system, user, agentVerdictSchema, MODELS.REASONING);
 }
 
 // ========== OPERATOR AGENT ==========
@@ -154,7 +154,7 @@ Be honest about whether THIS SPECIFIC USER can execute. List concrete blockers.
 Reference the report claims — can this user achieve the break-even timeline? The GTM plan? The moat strategies?
 `.trim();
 
-  return generateStructuredOutput(system, user, agentVerdictSchema, MODELS.REASONING);
+  return generateStructuredOutput<AgentVerdict>(system, user, agentVerdictSchema, MODELS.REASONING);
 }
 
 // ========== DEBATE RESOLVER ==========
