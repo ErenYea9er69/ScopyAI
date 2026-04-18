@@ -15,7 +15,8 @@ import type { ResearchData } from '../research/orchestrator';
 import { searchMarket, searchCompetitors } from '../research/tavily';
 
 export function shouldTriggerPivot(saturation: number, cynicScore: number): boolean {
-  return saturation > 70 || cynicScore > 80;
+  // v4: saturation -1 means UNKNOWN — treat as high-risk and trigger pivot
+  return saturation > 70 || saturation === -1 || cynicScore > 80;
 }
 
 export async function runAutoPivot(
@@ -141,8 +142,9 @@ Use the user's unique insight and founder fit to find pivots where they have an 
             adjustedSaturation = pivot.newSaturation; // Keep LLM estimate if no data
           }
 
-          // v3: Pivot-must-be-better guard — reject pivots with higher saturation than original
-          if (adjustedSaturation >= saturation) {
+          // v4: Pivot-must-be-better guard — reject pivots with higher saturation than original
+          // Skip guard if original saturation is unknown (0 or -1)
+          if (saturation > 0 && adjustedSaturation >= saturation) {
             console.warn(`[Auto-Pivot] Pivot "${pivot.title}" saturation (${adjustedSaturation}%) is >= original (${saturation}%). Capping at ${saturation - 5}%.`);
             adjustedSaturation = Math.max(10, saturation - 5);
           }

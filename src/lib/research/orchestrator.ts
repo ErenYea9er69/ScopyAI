@@ -311,14 +311,16 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
     .map(p => platformToDomain[p] || p)
     .filter(d => d.includes('.'));  // Only keep valid-looking domains
 
-  const [marketRes, compRes, painRes, trendRes, regRes, econRes, declineRes, googleFallback] = await Promise.all([
+  // v4: Added platform partner search to catch competitors with official platform endorsements
+  const [marketRes, compRes, painRes, trendRes, regRes, econRes, declineRes, partnerRes, googleFallback] = await Promise.all([
     tavily.searchMarket(intake.niche, intake.geography),
     tavily.searchCompetitors(intake.niche, intake.geography),
     tavily.searchPainPoints(intake.niche, complaintDomains, intake.geography),
     tavily.searchTrends(intake.niche),
     tavily.searchRegulations(intake.niche, intake.geography),
     tavily.searchUnitEconomics(intake.niche, intake.geography),
-    tavily.searchMarketDecline(intake.niche, intake.geography),  // NEW: Decline signal search
+    tavily.searchMarketDecline(intake.niche, intake.geography),
+    tavily.searchPlatformPartners(intake.niche, intake.geography),  // v4: Find official platform partners
     serper.googleSearch(`${intake.niche} software solutions ${intake.geography}`) // Fallback/Supplemental
   ]);
 
@@ -396,6 +398,11 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
     ...extractedCompetitorsContext,
     ...(compRes?.results?.map(fmt) || []),
     ...(compRes2?.results?.map(fmt) || []),
+    // v4: Merge platform partner results into competitor data with special tag
+    ...(partnerRes?.results?.map((r: any) => {
+      const base = fmt(r);
+      return `[🏷️ PLATFORM PARTNER — this company has an official partnership in this space] ${base}`;
+    }) || []),
   ].filter(Boolean);
   const painPoints = [
     ...(painRes?.results?.map(fmt) || []),
@@ -419,8 +426,10 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
     ...(econRes?.results?.map(fmt) || []),
   ].filter(Boolean) as string[];
 
-  // === DEAD COMPETITOR DETECTION ===
-  // Extract competitor names from research data and check if any are defunct
+  // === DEAD COMPETITOR DETECTION v4 ===
+  // v4: Precision system with counter-signal verification to prevent false positives.
+  // Previous versions marked WHOOP ($10B) and Macrostax (200K users) as defunct
+  // because search results mentioned OTHER defunct companies in the same articles.
   const extractedNames = extractCompetitorNames(competitors, intake.competitorUrls || []);
   if (extractedNames.length > 0) {
     console.log(`[Orchestrator] Checking ${extractedNames.length} competitor names for shutdown signals: ${extractedNames.join(', ')}`);
@@ -429,27 +438,73 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
       extractedNames.map(async (name) => {
         try {
           const status = await tavily.searchCompetitorStatus(name);
-          const hasShutdownSignal = status.results?.some((r: any) => {
-            const content = `${r.title || ''} ${r.content || ''}`.toLowerCase();
-            return content.includes('shut down') || content.includes('shutdown') || 
-                   content.includes('closed') || content.includes('ceased operations') ||
-                   content.includes('defunct') || content.includes('bankruptcy');
-          });
-          return { name, isDefunct: hasShutdownSignal, results: status.results };
+          const nameLower = name.toLowerCase();
+          
+          // v4: PRECISION CHECK — require the company name to appear NEAR shutdown keywords
+          // in the same sentence, not just anywhere in the same article
+          let shutdownScore = 0;
+          let vitalityScore = 0;
+          
+          for (const r of (status.results || [])) {
+            const title = (r.title || '').toLowerCase();
+            const content = (r.content || '').toLowerCase();
+            
+            // Split into sentences for precision matching
+            const sentences = `${title}. ${content}`.split(/[.!?]+/);
+            
+            for (const sentence of sentences) {
+              const mentionsName = sentence.includes(nameLower);
+              if (!mentionsName) continue; // Skip sentences that don't mention this company
+              
+              // Shutdown signals IN THE SAME SENTENCE as the company name
+              const shutdownKeywords = ['shut down', 'shutdown', 'ceased operations', 'defunct', 'went bankrupt', 'closed permanently', 'terminated', 'discontinued'];
+              const hasShutdown = shutdownKeywords.some(kw => sentence.includes(kw));
+              if (hasShutdown) shutdownScore += 2;
+              
+              // COUNTER-SIGNALS — evidence the company is ALIVE
+              const vitalityKeywords = ['raised', 'funding', 'valuation', 'active users', 'members', 'launched', 'partnership', 'pricing', 'plans start at', 'per month', 'per year', 'revenue', 'bookings', 'growth', 'series'];
+              const hasVitality = vitalityKeywords.some(kw => sentence.includes(kw));
+              if (hasVitality) vitalityScore += 1;
+            }
+          }
+          
+          // v4: Only mark as defunct if shutdown signals DOMINATE and no vitality signals exist
+          const isDefunct = shutdownScore >= 3 && vitalityScore === 0;
+          
+          console.log(`[Orchestrator] ${name}: shutdownScore=${shutdownScore}, vitalityScore=${vitalityScore}, verdict=${isDefunct ? 'DEFUNCT' : 'ALIVE'}`);
+          
+          return { name, isDefunct, shutdownScore, vitalityScore, results: status.results };
         } catch {
-          return { name, isDefunct: false, results: [] };
+          return { name, isDefunct: false, shutdownScore: 0, vitalityScore: 0, results: [] };
         }
       })
     );
     
-    // Tag defunct competitors in the competitor data
+    // Tag defunct competitors across ALL data arrays (not just competitors)
     for (const { name, isDefunct } of statusResults) {
       if (isDefunct) {
-        console.warn(`[Orchestrator] ⚠️ DEFUNCT COMPETITOR DETECTED: ${name}`);
-        // Prefix all competitor entries mentioning this name
+        console.warn(`[Orchestrator] ⚠️ CONFIRMED DEFUNCT: ${name} (passed precision + counter-signal checks)`);
+        const defunctTag = `[⚠️ DEFUNCT — this competitor has confirmed shutdown/ceased operations] `;
+        const nameLower = name.toLowerCase();
+        
+        // Tag in competitors array
         for (let i = 0; i < competitors.length; i++) {
-          if (competitors[i].toLowerCase().includes(name.toLowerCase())) {
-            competitors[i] = `[⚠️ DEFUNCT — this competitor appears to have shut down or ceased operations] ${competitors[i]}`;
+          if (competitors[i].toLowerCase().includes(nameLower) && !competitors[i].startsWith('[⚠️ DEFUNCT')) {
+            competitors[i] = `${defunctTag}${competitors[i]}`;
+          }
+        }
+        
+        // v4: Also tag in painPoints — prevent using defunct company marketing copy as buyer evidence
+        for (let i = 0; i < painPoints.length; i++) {
+          if (painPoints[i].toLowerCase().includes(nameLower) && !painPoints[i].startsWith('[⚠️ DEFUNCT')) {
+            painPoints[i] = `[⚠️ SOURCE FROM DEFUNCT COMPANY — ${name} has shut down. Do NOT use their marketing copy as current buyer evidence] ${painPoints[i]}`;
+          }
+        }
+        
+        // v4: Also tag in marketSize
+        for (let i = 0; i < marketSize.length; i++) {
+          if (marketSize[i].toLowerCase().includes(nameLower) && !marketSize[i].startsWith('[⚠️ DEFUNCT')) {
+            marketSize[i] = `[⚠️ DATA FROM DEFUNCT COMPANY — ${name} has shut down. Their market data may be outdated] ${marketSize[i]}`;
           }
         }
       }

@@ -108,6 +108,20 @@ Include exact verbatim quotes from forums/reviews where available.
 IMPORTANT: If a buyer type is specified (e.g., Enterprise vs Consumer), build the avatar for THAT buyer type.
 For the shadow avatar, profile the lookalike customer who will NEVER buy.
 For payment threshold, estimate low/mid/high price anchors with reasoning.
+
+SOURCE AGE VERIFICATION (CRITICAL):
+- Check the [AGE: YYYY] tag on every source you cite.
+- Sources older than 5 years (current year minus source year > 5) are ARCHAEOLOGICAL, not market research.
+- If a pain point or buyer language quote comes from before 2022, you MUST:
+  (a) Flag it: "⚠️ Source is from [YEAR] — pre-dating current AI tools (ChatGPT, AI coaching) that may have eliminated this pain point."
+  (b) Set confidence to "low" for that pain point.
+  (c) Add to notFound: "Primary pain point evidence is [N] years old. Current willingness-to-pay may have changed significantly since free AI alternatives became available."
+- If ALL your pain point sources are older than 3 years, add: "CRITICAL: No current (<3 year) pain point evidence found. Unable to confirm these pain points still exist at intensity sufficient to drive paid subscriptions."
+
+DEFUNCT COMPANY MARKETING COPY:
+- If ANY source is tagged [⚠️ SOURCE FROM DEFUNCT COMPANY], you MUST NOT use their marketing copy, testimonials, or buyer language as evidence of current customer desire.
+- A dead company's website copy is not live market evidence. Their customers have either found alternatives or stopped wanting the product.
+- If the only buyer language quotes come from defunct companies, state this explicitly and set confidence to "low".
 `.trim();
 
   return { system, user };
@@ -239,8 +253,10 @@ BIG-COMPANY RETREAT = DANGER SIGNAL:
 
 SATURATION SCORE METHODOLOGY:
 - saturationScore percentage MUST be based on SPECIFIC EVIDENCE from the research data: competitor count, search volume data, market share distribution, or keyword competition scores.
-- If you cannot cite specific quantitative evidence for your saturation score, set percentage to 0 and reasoning to "Insufficient quantitative data to calculate saturation reliably. [N] competitors found in research data but no market share or search volume data available."
+- If you cannot cite specific quantitative evidence for your saturation score, set percentage to -1 (meaning UNKNOWN, not zero) and reasoning to "Insufficient quantitative data to calculate saturation reliably. [N] competitors found in research data but no market share or search volume data available. -1 indicates UNKNOWN, not empty."
 - Do NOT assign a saturation percentage based on vibes or the existence of adjacent-market competitors. Only DIRECT competitors in the same niche count.
+- IMPORTANT: saturation 0% means "verified empty market with zero competitors". If you found ANY competitors in the research data, 0% is WRONG. Use at minimum: 1-2 competitors = 15-25%, 3-5 competitors = 30-50%, 6+ competitors = 50-75%.
+- If platform partner data contains [🏷️ PLATFORM PARTNER] tags, those companies are ESTABLISHED players with OFFICIAL endorsements. Factor them heavily into saturation.
 
 EXECUTION DIFFICULTY SCORE CONSISTENCY (HARD CONSTRAINT):
 - After generating your blockers list, RE-READ every blocker.
@@ -318,6 +334,12 @@ GEOGRAPHY-SPECIFIC COMPETITOR AVAILABILITY:
 - For EACH competitor, explicitly check: is this competitor available in the user's target geography?
 - If a competitor is already operating in the same country/region as the user, the "market gap" claim for that geography is INVALID.
 - State: "[Competitor] is already available in [geography] at [price]" if this information exists in the research data.
+
+PLATFORM PARTNER DETECTION:
+- If ANY competitor data contains [🏷️ PLATFORM PARTNER] tags, that company has an OFFICIAL partnership in this space.
+- These are NOT distribution opportunities — they are CLOSED distribution channels.
+- List platform-partnered companies in the "competitors" array with strength: "Official platform partner — controls primary distribution channel for [platform]."
+- In your userCompetitorVerdict, explicitly state: "[Company] has an official partnership with [Platform], which closes this distribution channel to new entrants."
 
 FINANCIAL DATA HONESTY:
 - For competitor revenue/traffic, ONLY use numbers that appear verbatim in the [SOURCE:] data.
@@ -560,6 +582,19 @@ If the market is saturated, focus on moats that create differentiation, not just
 Build moats around the user's unique insight where possible — that's their natural edge.
 Order moats from most achievable (given user's stage and budget) to most aspirational.
 Be specific about HOW to build each moat for this exact niche.
+
+MOAT COST CAP (HARD CONSTRAINT):
+- After generating all moat strategies, SUM their estimatedCost values.
+- If the combined total exceeds the user's budget, REMOVE the most expensive moats until the total fits.
+- A moat portfolio that costs more than the entire budget is fiction — the user cannot build moats before building the product.
+- If the user has $5,000 total, moat strategies should cost no more than 30% of that ($1,500) — the rest is needed for product, legal, and marketing.
+
+SWITCHING COST ETHICS (CRITICAL):
+- Switching cost moats MUST comply with GDPR Article 20 (right to data portability).
+- You MUST NOT recommend deliberately degrading data exports, withholding synthesized scores, or making export formats incompatible.
+- These are dark patterns and regulatory liabilities in health data contexts.
+- Valid switching costs: personalized baselines that take time to rebuild, community relationships, integration depth with user's existing tools.
+- INVALID switching costs: data hostage-taking, incomplete exports, proprietary lock-in of health data.
 `.trim();
 
   return { system, user };

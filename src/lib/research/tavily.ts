@@ -123,6 +123,18 @@ export async function searchMarketDecline(niche: string, geography?: string) {
   return { results: response.results };
 }
 
+/**
+ * v4: Searches for official platform partnerships in the niche.
+ * Catches competitors like Levels (CrossFit's official metabolic health partner)
+ * that represent CLOSED distribution channels, not opportunities.
+ */
+export async function searchPlatformPartners(niche: string, geography?: string) {
+  const geoClause = geography ? ` ${geography}` : '';
+  const query = `"${niche}" "official partner" OR "partnership" OR "approved" OR "endorsed by" OR "exclusive partner"${geoClause}`;
+  const response = await tavilySearch(query, { maxResults: 5, timeRange: 'year' });
+  return { results: response.results };
+}
+
 export async function extractPage(url: string, niche?: string) {
   trackTavilyUsage(1); // Extract costs credits too
   let clientIndex = Math.floor(Math.random() * tvlyClients.length);
