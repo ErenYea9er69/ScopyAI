@@ -35,7 +35,6 @@ export function LayerSection({ id, title, icon, color, data, notFound, reliabili
 
   if (!data) return null;
 
-  // v5: Separate fatal flags from regular notFound items
   const FATAL_KEYWORDS = ['IMPOSSIBLE', 'NON-VIABLE', 'KILL', 'FATAL', 'BLOCKED', 'CONTRADICTION', 'THEORETICAL ONLY'];
   const fatalItems = (notFound || []).filter(item => FATAL_KEYWORDS.some(kw => item.toUpperCase().includes(kw)));
   const regularItems = (notFound || []).filter(item => !FATAL_KEYWORDS.some(kw => item.toUpperCase().includes(kw)));
@@ -48,7 +47,6 @@ export function LayerSection({ id, title, icon, color, data, notFound, reliabili
 
   return (
     <div className="mb-5" id={id}>
-      {/* Section Header */}
       <div
         className="flex items-center gap-3 cursor-pointer group mb-3"
         onClick={() => setExpanded(!expanded)}
@@ -57,7 +55,6 @@ export function LayerSection({ id, title, icon, color, data, notFound, reliabili
           {icon}
         </div>
         <h2 className="text-[15px] font-medium flex-1">{title}</h2>
-        {/* v5: Reliability badge */}
         {reliability && (
           <span
             className="text-[10px] font-mono py-0.5 px-2 rounded-full mr-2"
@@ -77,7 +74,6 @@ export function LayerSection({ id, title, icon, color, data, notFound, reliabili
 
       {expanded && (
         <div className="bg-surface border border-border rounded-[16px] p-5 space-y-4">
-          {/* v5: Fatal flags promoted to TOP */}
           {fatalItems.length > 0 && (
             <div className="bg-red-500/5 border border-red-500/20 rounded-[10px] p-3">
               <div className="text-[11px] font-mono text-red-400 uppercase tracking-wider mb-1.5">🚫 Critical Findings</div>
@@ -91,10 +87,8 @@ export function LayerSection({ id, title, icon, color, data, notFound, reliabili
             </div>
           )}
 
-          {/* Render data dynamically based on data shape */}
           {renderLayerContent(data, showSources)}
 
-          {/* Show Sources Toggle */}
           <div className="flex items-center gap-3 pt-3 border-t border-border">
             <button
               onClick={() => setShowSources(!showSources)}
@@ -104,7 +98,6 @@ export function LayerSection({ id, title, icon, color, data, notFound, reliabili
             </button>
           </div>
 
-          {/* Not Found Transparency (non-fatal items only) */}
           {regularItems.length > 0 && (
             <div className="bg-surface-2 border border-border rounded-[10px] p-3 mt-3">
               <div className="text-[11px] font-mono text-muted mb-1.5">⚠ What we couldn&apos;t find:</div>
@@ -123,7 +116,6 @@ export function LayerSection({ id, title, icon, color, data, notFound, reliabili
   );
 }
 
-// -- Renders content in a generic fashion --
 function renderLayerContent(data: any, showSources: boolean) {
   if (!data || typeof data !== 'object') return null;
 
@@ -132,44 +124,97 @@ function renderLayerContent(data: any, showSources: boolean) {
   for (const [key, value] of Object.entries(data)) {
     if (key === 'notFound') continue;
 
+    if (typeof value === 'number' && (key.toLowerCase().includes('margin') || key.toLowerCase().includes('score') || key.toLowerCase().includes('saturation'))) {
+      elements.push(
+        <div key={key} className="mb-4">
+          <div className="flex justify-between items-center mb-1.5 leading-none">
+            <span className="text-[11px] text-muted font-mono uppercase tracking-wider">{formatKey(key)}</span>
+            <span className="text-[12px] font-bold text-text">{value}%</span>
+          </div>
+          <div className="w-full h-1.5 bg-surface-3 rounded-full overflow-hidden">
+            <div 
+              className={cn("h-full rounded-full transition-all duration-500", value > 40 ? "bg-accent" : "bg-brand-red")}
+              style={{ width: `${value}%` }}
+            />
+          </div>
+        </div>
+      );
+      continue;
+    }
+
+    if (typeof value === 'string' && (key.toLowerCase().includes('payback') || key.toLowerCase().includes('time') || key.toLowerCase().includes('budget'))) {
+      elements.push(
+        <div key={key} className="flex items-center justify-between bg-accent/5 border border-accent/20 rounded-[10px] p-3 mb-3">
+          <span className="text-[11px] text-muted font-mono uppercase tracking-wider">{formatKey(key)}</span>
+          <span className="text-[14px] font-bold text-accent">{value}</span>
+        </div>
+      );
+      continue;
+    }
+
+    if (Array.isArray(value) && (key.toLowerCase().includes('flywheel') || key.toLowerCase().includes('roadmap') || key.toLowerCase().includes('phases'))) {
+      elements.push(
+        <div key={key} className="space-y-3 mb-4">
+          <h4 className="text-[11px] text-muted font-mono uppercase tracking-wider">{formatKey(key)}</h4>
+          <div className="grid grid-cols-1 gap-2">
+            {value.map((step: any, i) => (
+              <div key={i} className="flex gap-3 bg-surface-2 border border-border rounded-[12px] p-3">
+                <div className="w-6 h-6 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center text-[11px] font-bold text-accent shrink-0 mt-0.5">
+                  {i + 1}
+                </div>
+                <div>
+                  <div className="text-[13px] font-bold text-text mb-0.5">{step.phase || step.title || step.moatFocus || "Next Step"}</div>
+                  <p className="text-[12px] text-muted-2 leading-relaxed">{step.howItScales || step.description || step.content || step.action}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+      continue;
+    }
+
     if (Array.isArray(value)) {
       elements.push(
-        <div key={key}>
-          <h4 className="text-[12px] font-mono uppercase tracking-[0.06em] text-muted mb-2.5">
+        <div key={key} className="mb-4">
+          <h4 className="text-[11px] text-muted font-mono uppercase tracking-wider mb-2.5">
             {formatKey(key)}
           </h4>
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {(value as any[]).map((item, i) => (
-              <div key={i} className="bg-surface-2 border border-border rounded-[10px] p-3 px-3.5">
+              <div key={i} className="bg-surface-2 border border-border rounded-[10px] p-3 px-3.5 hover:border-accent/30 transition-colors">
                 {typeof item === 'string' ? (
-                  <p className="text-[13px] text-muted-2 leading-[1.5]">{item}</p>
+                  <p className="text-[12px] text-muted-2 leading-[1.5]">{item}</p>
                 ) : typeof item === 'object' ? (
-                  <div className="space-y-1">
-                    {Object.entries(item).map(([k, v]) => {
-                      if (k === 'confidence' && typeof v === 'string') {
-                        return <div key={k}>{confidenceBadge(v as ConfidenceLevel)}</div>;
-                      }
-                      if (k === 'source' || k === 'sources') {
-                        if (!showSources) return null;
-                        const urls = Array.isArray(v) ? v : [v];
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-1.5 h-1.5 rounded-full bg-accent" />
+                      <div className="text-[13px] font-bold text-text leading-none">{item.title || item.type || item.userCounterStrategy || i+1}</div>
+                    </div>
+                    <div className="text-[12px] text-muted-2 leading-relaxed">
+                      {Object.entries(item).map(([k, v]) => {
+                        if (['title', 'type', 'confidence', 'sources', 'source', 'userCounterStrategy'].includes(k)) return null;
                         return (
-                          <div key={k} className="mt-1">
-                            {urls.filter(Boolean).map((url, ui) => (
-                              <a key={ui} href={url as string} target="_blank" rel="noreferrer"
-                                className="text-[10px] font-mono text-accent-2 hover:underline block truncate max-w-[400px]">
-                                {url as string}
-                              </a>
-                            ))}
+                          <div key={k} className="mb-1 last:mb-0">
+                            <span className="text-[10px] uppercase font-mono text-muted mr-1.5">{formatKey(k)}:</span>
+                            <span className="text-muted-2">{String(v)}</span>
                           </div>
                         );
-                      }
-                      return (
-                        <div key={k} className="flex items-start gap-1.5">
-                          <span className="text-[11px] text-muted font-mono shrink-0 w-[100px]">{formatKey(k)}:</span>
-                          <span className="text-[12px] text-muted-2 leading-[1.4]">{String(v)}</span>
-                        </div>
-                      );
-                    })}
+                      })}
+                    </div>
+                    {item.confidence && (
+                      <div className="pt-1.5 border-t border-border/50">
+                        {confidenceBadge(item.confidence as ConfidenceLevel)}
+                      </div>
+                    )}
+                    {(item.source || item.sources) && showSources && (
+                      <div className="pt-1 border-t border-border/50 mt-1">
+                         {Array.isArray(item.source || item.sources) 
+                           ? (item.source || item.sources).map((s: string, si: number) => <SourceLink key={si} url={s} />)
+                           : <SourceLink url={item.source || item.sources} />
+                         }
+                      </div>
+                    )}
                   </div>
                 ) : null}
               </div>
@@ -179,32 +224,19 @@ function renderLayerContent(data: any, showSources: boolean) {
       );
     } else if (typeof value === 'object' && value !== null) {
       elements.push(
-        <div key={key}>
-          <h4 className="text-[12px] font-mono uppercase tracking-[0.06em] text-muted mb-2.5">
-            {formatKey(key)}
-          </h4>
-          <div className="bg-surface-2 border border-border rounded-[10px] p-3 px-3.5 space-y-1.5">
+        <div key={key} className="mb-4">
+          <h4 className="text-[11px] text-muted font-mono uppercase tracking-wider mb-2">{formatKey(key)}</h4>
+          <div className="bg-surface-2 border border-border rounded-[10px] p-3 space-y-2">
             {Object.entries(value).map(([k, v]) => {
-              if (k === 'confidence' && typeof v === 'string') {
-                return <div key={k}>{confidenceBadge(v as ConfidenceLevel)}</div>;
+              if (k === 'confidence') return <div key={k} className="pt-1 border-t border-border/50">{confidenceBadge(v as ConfidenceLevel)}</div>;
+              if (k === 'sources' || k === 'source') {
+                if (!showSources) return null;
+                return <div key={k} className="pt-1 border-t border-border/50">{(v as any[]).map((s, i) => <SourceLink key={i} url={s} />)}</div>;
               }
-              if (k === 'sources' && Array.isArray(v) && showSources) {
-                return (
-                  <div key={k}>
-                    {(v as string[]).filter(Boolean).map((url, i) => (
-                      <a key={i} href={url} target="_blank" rel="noreferrer"
-                        className="text-[10px] font-mono text-accent-2 hover:underline block truncate max-w-[400px]">
-                        {url}
-                      </a>
-                    ))}
-                  </div>
-                );
-              }
-              if (k === 'sources' && !showSources) return null;
               return (
-                <div key={k} className="flex items-start gap-2">
-                  <span className="text-[11px] text-muted font-mono shrink-0 min-w-[90px]">{formatKey(k)}:</span>
-                  <span className="text-[12px] text-muted-2 leading-[1.4]">{Array.isArray(v) ? v.join(', ') : String(v)}</span>
+                <div key={k} className="flex flex-col gap-0.5">
+                  <span className="text-[10px] uppercase font-mono text-muted">{formatKey(k)}</span>
+                  <span className="text-[12px] text-text font-medium leading-tight">{Array.isArray(v) ? v.join(', ') : String(v)}</span>
                 </div>
               );
             })}
@@ -213,15 +245,25 @@ function renderLayerContent(data: any, showSources: boolean) {
       );
     } else {
       elements.push(
-        <div key={key} className="flex items-start gap-2">
-          <span className="text-[11px] text-muted font-mono shrink-0 min-w-[90px]">{formatKey(key)}:</span>
-          <span className="text-[13px] text-muted-2 leading-[1.4]">{String(value)}</span>
+        <div key={key} className="flex items-center justify-between mb-2">
+          <span className="text-[11px] text-muted font-mono uppercase tracking-wider">{formatKey(key)}</span>
+          <span className="text-[13px] text-text font-bold text-right">{String(value)}</span>
         </div>
       );
     }
   }
 
-  return <>{elements}</>;
+  return <div className="space-y-1">{elements}</div>;
+}
+
+function SourceLink({ url }: { url: string }) {
+  if (!url) return null;
+  return (
+    <a href={url} target="_blank" rel="noreferrer"
+      className="text-[10px] font-mono text-accent/70 hover:text-accent hover:underline block truncate max-w-full py-0.5">
+      › {url}
+    </a>
+  );
 }
 
 function formatKey(key: string): string {

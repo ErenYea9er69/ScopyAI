@@ -76,16 +76,61 @@ export function DebateCard({ debate }: { debate: DebateResult }) {
           ))}
         </div>
 
-        {/* Final Resolution */}
-        <div className="bg-white/[0.02] border-t border-border p-4 px-5 flex items-start gap-3">
-          <div className="w-1.5 h-1.5 rounded-full bg-accent-5 mt-1.5 shrink-0" />
-          <div>
-            <span className="text-[13px] font-medium text-text">Final Resolution: </span>
-            <span className="text-[13px] text-muted-2 leading-[1.5]">{debate.finalVerdict}</span>
+        {/* v5: The Investor Duel (Clash Points) */}
+        {debate.clashPoints && debate.clashPoints.length > 0 && (
+          <div className="bg-brand-red/[0.03] border-t border-brand-red/10 p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-[11px] font-mono text-brand-red uppercase tracking-wider">⚡ The Investor Duel</span>
+            </div>
+            <div className="space-y-2">
+              {debate.clashPoints.map((point, i) => (
+                <div key={i} className="flex gap-3 items-start">
+                  <div className="w-5 h-5 rounded bg-brand-red/10 border border-brand-red/20 flex items-center justify-center text-[10px] shrink-0 mt-0.5">VS</div>
+                  <p className="text-[13px] text-brand-red/90 leading-relaxed font-medium">{point}</p>
+                </div>
+              ))}
+            </div>
           </div>
-          <span className="font-mono text-[14px] font-semibold text-accent ml-auto shrink-0">
-            {debate.compositeScore}/100
-          </span>
+        )}
+
+        {/* v5: Execution Roadmap (Milestones) */}
+        {debate.milestones && debate.milestones.length > 0 && (
+          <div className="bg-accent/[0.03] border-t border-accent/10 p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-[11px] font-mono text-accent uppercase tracking-wider">🗺️ Execution Roadmap</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {debate.milestones.map((ms, i) => {
+                const isKill = ms.condition.toUpperCase().includes('KILL');
+                const isPivot = ms.condition.toUpperCase().includes('PIVOT');
+                const colorClass = isKill ? "text-brand-red border-brand-red/20 bg-brand-red/5" : isPivot ? "text-accent-5 border-accent-5/20 bg-accent-5/5" : "text-accent border-accent/20 bg-accent/5";
+                
+                return (
+                  <div key={i} className={cn("border rounded-[12px] p-3", colorClass)}>
+                    <div className="text-[10px] font-mono uppercase opacity-70 mb-1">{ms.condition}</div>
+                    <div className="text-[12px] font-bold leading-snug">{ms.action}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Final Resolution */}
+        <div className="bg-white/[0.02] border-t border-border p-5 flex items-start justify-between gap-5">
+          <div className="flex items-start gap-3">
+            <div className="w-1.5 h-1.5 rounded-full bg-accent-5 mt-1.5 shrink-0" />
+            <div>
+              <span className="text-[13px] font-bold text-text">Resolution Verdict: </span>
+              <p className="text-[13px] text-muted-2 leading-relaxed mt-1">{debate.finalVerdict}</p>
+            </div>
+          </div>
+          <div className="text-right shrink-0">
+            <div className="text-[10px] font-mono text-muted uppercase tracking-tighter mb-0.5">Composite Score</div>
+            <div className="font-mono text-[24px] font-bold text-accent leading-none">
+              {debate.compositeScore}
+            </div>
+          </div>
         </div>
       </div>
     </div>

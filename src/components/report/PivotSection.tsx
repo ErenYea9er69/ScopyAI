@@ -21,34 +21,54 @@ export function PivotSection({ pivot }: { pivot: AutoPivotResult }) {
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-3.5">
+      <div className="flex flex-col lg:flex-row gap-4">
         {pivot.pivots.map((p, i) => {
           const isTopPick = p.rank === 'A';
           return (
             <div
               key={i}
               className={cn(
-                "flex-1 border rounded-[14px] p-5 relative transition-transform hover:-translate-y-0.5",
+                "flex-1 border rounded-[20px] p-6 relative transition-all group overflow-hidden",
                 isTopPick
-                  ? "bg-accent/5 border-accent/30"
-                  : "bg-surface border-border"
+                  ? "bg-accent/[0.03] border-accent/20 shadow-sm shadow-accent/5"
+                  : "bg-surface border-border hover:border-accent/20"
               )}
             >
+              {/* Background Glow */}
+              {isTopPick && <div className="absolute top-0 right-0 w-32 h-32 bg-accent/5 blur-3xl -mr-16 -mt-16 rounded-full" />}
+
               <div className={cn(
-                "absolute -top-2.5 left-4 font-mono text-[10px] px-2.5 py-0.5 rounded-full font-medium",
-                isTopPick ? "bg-accent text-bg" : "bg-surface-3 border border-border-accent text-muted"
+                "absolute -top-px left-6 font-mono text-[9px] px-3 py-1 rounded-b-lg font-bold uppercase tracking-widest border-x border-b",
+                isTopPick ? "bg-accent text-bg border-accent/30" : "bg-surface-3 border-border text-muted"
               )}>
-                PIVOT {p.rank} {isTopPick ? '(BEST FIT)' : ''}
+                Pivot {p.rank} {isTopPick ? '(Priority)' : ''}
               </div>
 
-              <h4 className="text-[14px] text-text font-medium mb-2 mt-1">{p.title}</h4>
-              <p className="text-[12px] text-muted-2 leading-[1.5] mb-3">{p.description}</p>
+              <h4 className="text-[16px] text-text font-bold mb-2 mt-4 leading-tight group-hover:text-accent transition-colors">{p.title}</h4>
+              <p className="text-[12px] text-muted-2 leading-relaxed mb-4">{p.description}</p>
 
-              <div className="flex justify-between text-[12px] text-muted-2 pt-2 border-t border-border">
-                <span>Saturation: {p.newSaturation}%</span>
-                <span className={fitColors[p.executionFit] || 'text-muted'}>
-                  Fit: {p.executionFit}
-                </span>
+              {/* v5: Strategic Logic Block */}
+              <div className={cn(
+                "bg-surface-2 border border-border rounded-[12px] p-3 mb-4",
+                isTopPick && "border-accent/10 bg-accent/[0.01]"
+              )}>
+                <div className="text-[10px] font-mono uppercase text-muted mb-1.5 opacity-70">Strategic Logic</div>
+                <p className="text-[11px] text-muted font-medium leading-relaxed italic">
+                  "{p.reasoning}"
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between pt-3 border-t border-border/50">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-mono text-muted uppercase">Saturation</span>
+                  <span className="text-[13px] font-bold text-text">{p.newSaturation}%</span>
+                </div>
+                <div className="flex flex-col text-right">
+                  <span className="text-[10px] font-mono text-muted uppercase">Execution Fit</span>
+                  <span className={cn("text-[13px] font-bold", fitColors[p.executionFit] || 'text-muted')}>
+                    {p.executionFit}
+                  </span>
+                </div>
               </div>
             </div>
           );
