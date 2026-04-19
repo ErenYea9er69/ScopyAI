@@ -465,12 +465,16 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
 
   const extractedCompetitorsContext = competitorExtractions
     .filter(Boolean)
-    .flatMap((ex: any) => ex?.results?.map((r: any) => {
-      const url = r?.url || 'user-provided';
-      const title = r?.title || '';
-      const content = r?.rawContent || r?.content || '';
-      return `[SOURCE: ${url} | ${title}] ${content}`;
-    }) || []);
+    .flatMap((ex: any) => {
+      // Tavily Extract SDK returns a results array, but each item might be the raw content directly or another nested object
+      const rawResults = Array.isArray(ex?.results) ? ex.results : [];
+      return rawResults.map((r: any) => {
+        const url = r?.url || 'user-provided';
+        const title = r?.title || '';
+        const content = String(r?.rawContent || r?.content || r?.markdown || '').slice(0, 10000);
+        return `[SOURCE: ${url} | ${title}] ${content}`;
+      });
+    });
 
   // Aggregate Raw Strings with source URLs embedded (merge first pass + re-search)
   const marketSize = [

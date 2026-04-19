@@ -1,5 +1,20 @@
 import { z } from 'zod';
 
+// ========== SHARED RESILIENCE HELPERS (duplicated from report.ts for isolation) ==========
+
+const resilientScore = z.preprocess((val) => {
+  const num = parseFloat(String(val).replace(/[^\d.-]/g, ''));
+  if (isNaN(num)) return 50;
+  return Math.min(100, Math.max(0, num));
+}, z.number().min(0).max(100)).catch(50);
+
+const resilientScore10 = z.preprocess((val) => {
+  const num = parseFloat(String(val).replace(/[^\d.-]/g, ''));
+  if (isNaN(num)) return 5;
+  const base = num > 10 ? num / 10 : num;
+  return Math.min(10, Math.max(0, base));
+}, z.number().min(0).max(10)).catch(5);
+
 /**
  * Prompt 1: Semantic Query Expansion
  * Turns a raw user niche and insight into a 6-dimensional research plan.
@@ -11,7 +26,7 @@ export const queryPlanSchema = z.object({
   trendQueries: z.array(z.string()).default([]),
   regulationQueries: z.array(z.string()).default([]),
   unitEconomicsQueries: z.array(z.string()).default([]),
-});
+}).default({});
 
 export function queryExpansionPrompt(niche: string, geography: string, uniqueInsight: string, whyNow: string) {
   return {
@@ -44,10 +59,10 @@ Generate a comprehensive research plan JSON.`
  * Scores a search snippet for semantic relevance.
  */
 export const relevanceSchema = z.object({
-  relevanceScore: z.coerce.number().min(0).max(10).default(5),
+  relevanceScore: resilientScore10,
   reasoning: z.string().default('No reasoning provided'),
   shouldKeep: z.boolean().default(true),
-});
+}).default({ relevanceScore: 5, reasoning: 'No reasoning provided', shouldKeep: true });
 
 export function sourceRelevancePrompt(snippet: string, goal: string) {
   return {
@@ -72,12 +87,15 @@ Return a relevance score and reasoning JSON.`
  */
 export const competitorStatusSchema = z.object({
   competitors: z.array(z.object({
-    name: z.string(),
-    status: z.enum(['active', 'defunct', 'acquired', 'pivoted']).default('active'),
-    confidence: z.coerce.number().min(0).max(100).default(50),
+    name: z.string().default('Unknown Competitor'),
+    status: z.preprocess(
+      (val) => String(val || 'active').toLowerCase(),
+      z.enum(['active', 'defunct', 'acquired', 'pivoted'])
+    ).catch('active'),
+    confidence: resilientScore,
     evidence: z.string().default('No direct evidence found'),
   })).default([]),
-});
+}).default({ competitors: [] });
 
 export function competitorDetectivePrompt(context: string) {
   return {
@@ -104,8 +122,8 @@ export const gapAnalysisSchema = z.object({
   foundInsights: z.array(z.string()).default([]),
   missingInformation: z.array(z.string()).default([]),
   newQueries: z.array(z.string()).default([]),
-  depthScore: z.coerce.number().min(0).max(10).default(5),
-});
+  depthScore: resilientScore10,
+}).default({ foundInsights: [], missingInformation: [], newQueries: [], depthScore: 5 });
 
 export function gapAnalysisPrompt(niche: string, context: string) {
   return {

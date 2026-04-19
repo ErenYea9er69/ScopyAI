@@ -116,9 +116,15 @@ export async function generateStructuredOutput<T>(
         throw new Error('LLM failed to generate valid structured output.');
       }
       
-      // Feedback to LLM
+      // Feedback to LLM with detailed Zod error paths
+      let errorMessage = error?.message || String(error);
+      if (error instanceof z.ZodError) {
+        const issues = error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('\n');
+        errorMessage = `JSON Validation failed with these issues:\n${issues}`;
+      }
+
       currentMessages.push({ role: 'assistant', content: lastGeneratedContent || '{}' });
-      currentMessages.push({ role: 'user', content: `That resulted in a validation error: ${error?.message || error}. Please fix the JSON output to strictly match the schema.` });
+      currentMessages.push({ role: 'user', content: `${errorMessage}. Please fix the JSON output to strictly match the schema. Respond ONLY with the corrected JSON.` });
 
       // Exponential backoff
       await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempts)));

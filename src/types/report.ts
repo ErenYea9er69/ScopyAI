@@ -1,401 +1,469 @@
 import { z } from 'zod';
 
-// -- Shared primitives --
+// ========== SHARED RESILIENT PRIMITIVES ==========
 
+/**
+ * Robustly parses and normalizes confidence levels.
+ * Handles case-insensitivity and falls back to 'medium' on error.
+ */
 export const confidenceLevel = z.preprocess(
-  (val) => String(val).toLowerCase(),
+  (val) => String(val || 'medium').toLowerCase(),
   z.enum(['high', 'medium', 'low'])
 ).catch('medium');
 export type ConfidenceLevel = z.infer<typeof confidenceLevel>;
 
+/**
+ * A score schema that:
+ * 1. Coerces values to numbers
+ * 2. Clamps values to the range [0, 100]
+ * 3. Falls back to a safe default on total failure
+ */
+export const resilientScore = z.preprocess((val) => {
+  const num = parseFloat(String(val).replace(/[^\d.-]/g, ''));
+  if (isNaN(num)) return 50;
+  return Math.min(100, Math.max(0, num));
+}, z.number().min(0).max(100)).catch(50);
+
+/**
+ * Same as resilientScore but for 0-10 scales.
+ * Automatically scales 0-100 inputs down to 0-10.
+ */
+export const resilientScore10 = z.preprocess((val) => {
+  const num = parseFloat(String(val).replace(/[^\d.-]/g, ''));
+  if (isNaN(num)) return 5;
+  // If LLM returns a percentage (e.g. 75) for a 10-point scale, scale it down.
+  const base = num > 10 ? num / 10 : num;
+  return Math.min(10, Math.max(0, base));
+}, z.number().min(0).max(10)).catch(5);
+
+/**
+ * Handles percentages (e.g., "75%", 75, "0.75").
+ * Always returns a number between 0 and 100.
+ */
+export const percentSchema = z.preprocess((val) => {
+  if (typeof val === 'string') {
+    const clean = val.replace(/[^\d.-]/g, '');
+    let num = parseFloat(clean);
+    if (val.includes('%') && num > 0 && num <= 1) num = num * 100; // handle "0.75%" typo
+    if (num > 0 && num <= 1 && !val.includes('%')) num = num * 100; // handle loose 0.75
+    return Math.min(100, Math.max(0, num));
+  }
+  const num = typeof val === 'number' ? val : 0;
+  return num <= 1 && num > 0 ? num * 100 : num;
+}, z.number().min(0).max(100)).catch(0);
+
 export const citedClaim = z.object({
-  claim: z.string(),
-  source: z.coerce.string().optional(),
+  claim: z.string().default('No claim provided'),
+  source: z.coerce.string().optional().default(''),
   confidence: confidenceLevel,
+}).default({
+  claim: 'No claim provided',
+  source: '',
+  confidence: 'medium'
 });
 export type CitedClaim = z.infer<typeof citedClaim>;
 
-// -- Layer 1: Audience Intelligence --
+// ========== LAYER 1: AUDIENCE INTELLIGENCE ==========
 
 export const layer1Schema = z.object({
   painPoints: z.array(z.object({
-    pain: z.string(),
-    frequency: z.string(),
-    emotionalIntensity: z.string(),
-    wtpSignal: z.string(),
-    source: z.string().optional(),
+    pain: z.string().default(''),
+    frequency: z.string().default(''),
+    emotionalIntensity: z.string().default(''),
+    wtpSignal: z.string().default(''),
+    source: z.string().optional().default(''),
     confidence: confidenceLevel,
-  })),
+  })).default([]),
   buyerLanguage: z.array(z.object({
-    quote: z.string(),
-    source: z.string(),
-    context: z.string(),
-  })),
-  purchaseTriggers: z.array(citedClaim),
+    quote: z.string().default(''),
+    source: z.string().default(''),
+    context: z.string().default(''),
+  })).default([]),
+  purchaseTriggers: z.array(citedClaim).default([]),
   jobsToBeDone: z.object({
-    functional: z.string(),
-    social: z.string(),
-    emotional: z.string(),
-  }),
-  marketAwareness: z.enum(['unaware', 'problem_aware', 'solution_aware', 'product_aware', 'most_aware']),
+    functional: z.string().default(''),
+    social: z.string().default(''),
+    emotional: z.string().default(''),
+  }).default({ functional: '', social: '', emotional: '' }),
+  marketAwareness: z.preprocess(
+    (val) => String(val || 'problem_aware').toLowerCase(),
+    z.enum(['unaware', 'problem_aware', 'solution_aware', 'product_aware', 'most_aware'])
+  ).catch('problem_aware'),
   avatar: z.object({
-    expertiseLevel: z.string(),
-    mentalModel: z.string(),
-    platforms: z.array(z.string()),
-    identity: z.string(),
-    selfNarrative: z.string(),
-    trustedInfluencers: z.array(z.string()),
-    contentConsumed: z.array(z.string()),
+    expertiseLevel: z.string().default(''),
+    mentalModel: z.string().default(''),
+    platforms: z.array(z.string()).default([]),
+    identity: z.string().default(''),
+    selfNarrative: z.string().default(''),
+    trustedInfluencers: z.array(z.string()).default([]),
+    contentConsumed: z.array(z.string()).default([]),
+  }).default({
+    expertiseLevel: '',
+    mentalModel: '',
+    platforms: [],
+    identity: '',
+    selfNarrative: '',
+    trustedInfluencers: [],
+    contentConsumed: []
   }),
   nicheHangouts: z.array(z.object({
-    name: z.string(),
-    type: z.string(),
-    activityLevel: z.string(),
-  })),
+    name: z.string().default(''),
+    type: z.string().default(''),
+    activityLevel: z.string().default(''),
+  })).default([]),
   dmu: z.array(z.object({
-    role: z.string(),
-    priority: z.string(),
-    keyConcern: z.string(),
-  })).optional(),
-  hiddenObjections: z.array(citedClaim),
-  desiresAndDreams: z.array(citedClaim),
+    role: z.string().default(''),
+    priority: z.string().default(''),
+    keyConcern: z.string().default(''),
+  })).optional().default([]),
+  hiddenObjections: z.array(citedClaim).default([]),
+  desiresAndDreams: z.array(citedClaim).default([]),
   shadowAvatar: z.object({
-    description: z.string(),
-    whyTheyWontBuy: z.string(),
-    howToExclude: z.string(),
-  }),
+    description: z.string().default(''),
+    whyTheyWontBuy: z.string().default(''),
+    howToExclude: z.string().default(''),
+  }).default({ description: '', whyTheyWontBuy: '', howToExclude: '' }),
   paymentThreshold: z.object({
-    low: z.string(),
-    mid: z.string(),
-    high: z.string(),
-    reasoning: z.string(),
-  }),
-  notFound: z.array(z.string()).min(1).default(["No additional limitations identified"]),
-});
+    low: z.string().default(''),
+    mid: z.string().default(''),
+    high: z.string().default(''),
+    reasoning: z.string().default(''),
+  }).default({ low: '', mid: '', high: '', reasoning: '' }),
+  notFound: z.array(z.string()).default([]),
+}).default({});
 export type Layer1 = z.infer<typeof layer1Schema>;
 
-// -- Layer 2: Market Intelligence --
+// ========== LAYER 2: MARKET INTELLIGENCE ==========
 
 export const layer2Schema = z.object({
-  tam: z.object({ range: z.string(), confidence: confidenceLevel, sources: z.array(z.coerce.string()).optional().default([]) }),
-  sam: z.object({ range: z.string(), confidence: confidenceLevel, sources: z.array(z.coerce.string()).optional().default([]) }),
-  som: z.object({ range: z.string(), confidence: confidenceLevel, sources: z.array(z.coerce.string()).optional().default([]) }),
+  tam: z.object({ range: z.string().default(''), confidence: confidenceLevel, sources: z.array(z.coerce.string()).default([]) }).default({ range: '', sources: [] }),
+  sam: z.object({ range: z.string().default(''), confidence: confidenceLevel, sources: z.array(z.coerce.string()).default([]) }).default({ range: '', sources: [] }),
+  som: z.object({ range: z.string().default(''), confidence: confidenceLevel, sources: z.array(z.coerce.string()).default([]) }).default({ range: '', sources: [] }),
   proxyMarketComparison: z.object({
-    parentMarket: z.string(),
-    penetrationPotential: z.string(),
-    ceilingProxy: z.string(),
-  }),
+    parentMarket: z.string().default(''),
+    penetrationPotential: z.string().default(''),
+    ceilingProxy: z.string().default(''),
+  }).default({ parentMarket: '', penetrationPotential: '', ceilingProxy: '' }),
   capturedEase: z.object({
-    score: z.number().min(0).max(10),
-    reasoning: z.string(),
-  }),
+    score: resilientScore10,
+    reasoning: z.string().default(''),
+  }).default({ score: 5, reasoning: '' }),
   geographicExpansionMap: z.object({
-    tier1: z.array(z.string()),
-    tier2: z.array(z.string()),
-    tier3: z.array(z.string()),
-    reasoning: z.string(),
-  }),
+    tier1: z.array(z.string()).default([]),
+    tier2: z.array(z.string()).default([]),
+    tier3: z.array(z.string()).default([]),
+    reasoning: z.string().default(''),
+  }).default({ tier1: [], tier2: [], tier3: [], reasoning: '' }),
   marketMomentum: z.object({
-    direction: z.enum(['growing', 'stable', 'declining']),
-    velocityScore: z.number().min(0).max(100),
-    searchVolumeTrend: z.string(),
-    socialSentiment: z.string(),
-    fundingActivity: z.string(),
-  }),
+    direction: z.preprocess(
+      (val) => String(val || 'stable').toLowerCase(),
+      z.enum(['growing', 'stable', 'declining'])
+    ).catch('stable'),
+    velocityScore: resilientScore,
+    searchVolumeTrend: z.string().default(''),
+    socialSentiment: z.string().default(''),
+    fundingActivity: z.string().default(''),
+  }).default({ velocityScore: 50, searchVolumeTrend: '', socialSentiment: '', fundingActivity: '' }),
   macroInflectionPoints: z.array(z.object({
-    trigger: z.string(),
-    marketImpact: z.string(),
-    timing: z.string(),
-  })),
-  marketTimingVerdict: z.string(),
-  notFound: z.array(z.string()).min(1).default(["No additional limitations identified"]),
-});
+    trigger: z.string().default(''),
+    marketImpact: z.string().default(''),
+    timing: z.string().default(''),
+  })).default([]),
+  marketTimingVerdict: z.string().default(''),
+  notFound: z.array(z.string()).default([]),
+}).default({});
 export type Layer2 = z.infer<typeof layer2Schema>;
 
-// -- Layer 3: Survival Intelligence --
+// ========== LAYER 3: SURVIVAL INTELLIGENCE ==========
 
 export const layer3Schema = z.object({
-  dyingTrendSignals: z.array(citedClaim),
+  dyingTrendSignals: z.array(citedClaim).default([]),
   nativeObsolescence: z.object({
-    probability: z.number().min(0).max(100),
-    threateningFeature: z.string(),
-    timeframe: z.string(),
-    reasoning: z.string(),
-  }),
+    probability: percentSchema,
+    threateningFeature: z.string().default(''),
+    timeframe: z.string().default(''),
+    reasoning: z.string().default(''),
+  }).default({ probability: 0, threateningFeature: '', timeframe: '', reasoning: '' }),
   aiDisruptionRisk: z.object({
-    score: z.number().min(0).max(10),
-    threateningModel: z.string(),
-    valueAtRisk: z.string(),
+    score: resilientScore10,
+    threateningModel: z.string().default(''),
+    valueAtRisk: z.string().default(''),
     confidence: confidenceLevel,
-  }),
+  }).default({ score: 0, threateningModel: '', valueAtRisk: '' }),
   platformDependency: z.object({
-    score: z.number().min(0).max(10),
-    primaryPlatform: z.string(),
-    risk: z.string(),
-  }),
+    score: resilientScore10,
+    primaryPlatform: z.string().default(''),
+    risk: z.string().default(''),
+  }).default({ score: 0, primaryPlatform: '', risk: '' }),
   platformComplianceRisk: z.object({
-    appleGoogleRisk: z.string(),
-    apiProviderRisk: z.string(),
-    mitigation: z.string(),
-  }),
+    appleGoogleRisk: z.string().default(''),
+    apiProviderRisk: z.string().default(''),
+    mitigation: z.string().default(''),
+  }).default({ appleGoogleRisk: '', apiProviderRisk: '', mitigation: '' }),
   saturationScore: z.object({
-    percentage: z.number().min(-1).max(100),
-    reasoning: z.string(),
-  }),
+    percentage: percentSchema,
+    reasoning: z.string().default(''),
+  }).default({ percentage: 0, reasoning: '' }),
   redLineBlockers: z.array(z.object({
-    fact: z.string(),
-    blocker: z.string(),
-    severity: z.enum(['fatal', 'critical']),
-  })),
+    fact: z.string().default(''),
+    blocker: z.string().default(''),
+    severity: z.preprocess(
+      (val) => String(val || 'critical').toLowerCase(),
+      z.enum(['fatal', 'critical'])
+    ).catch('critical'),
+  })).default([]),
   legalMatrix: z.array(z.object({
-    jurisdiction: z.string(),
-    status: z.string(),
-    risk: z.string(),
-  })),
+    jurisdiction: z.string().default(''),
+    status: z.string().default(''),
+    risk: z.string().default(''),
+  })).default([]),
   gorillaCompetitors: z.array(z.object({
-    name: z.string(),
-    threat: z.string(),
-    defence: z.string(),
-  })),
+    name: z.string().default(''),
+    threat: z.string().default(''),
+    defence: z.string().default(''),
+  })).default([]),
   executionDifficulty: z.object({
-    score: z.number().min(0).max(100),
-    blockers: z.array(z.string()),
-  }),
+    score: resilientScore,
+    blockers: z.array(z.string()).default([]),
+  }).default({ score: 50, blockers: [] }),
   pivotBuffer: z.object({
-    score: z.number().min(0).max(10),
-    runwayUnits: z.string(),
-    reasoning: z.string(),
-  }),
+    score: resilientScore10,
+    runwayUnits: z.string().default(''),
+    reasoning: z.string().default(''),
+  }).default({ score: 5, runwayUnits: '', reasoning: '' }),
   scenarioSimulator: z.array(z.object({
-    threat: z.string(),
-    probability: z.string(),
-    consequence: z.string(),
-    cascadingEffect: z.string(),
-  })),
-  notFound: z.array(z.string()).min(1).default(["No additional limitations identified"]),
-});
+    threat: z.string().default(''),
+    probability: z.string().default(''),
+    consequence: z.string().default(''),
+    cascadingEffect: z.string().default(''),
+  })).default([]),
+  notFound: z.array(z.string()).default([]),
+}).default({});
 export type Layer3 = z.infer<typeof layer3Schema>;
 
-// -- Layer 4: Competitor Intelligence --
+// ========== LAYER 4: COMPETITOR INTELLIGENCE ==========
 
 export const failedCompetitorSchema = z.object({
-  name: z.string(),
-  shutdownDate: z.string(),
-  funding: z.string(),
-  reason: z.string(),
-  lesson: z.string(),
-});
+  name: z.string().default(''),
+  shutdownDate: z.string().default(''),
+  funding: z.string().default(''),
+  reason: z.string().default(''),
+  lesson: z.string().default(''),
+}).default({});
 export type FailedCompetitor = z.infer<typeof failedCompetitorSchema>;
 
 export const layer4Schema = z.object({
   userCompetitorVerdict: z.array(z.object({
-    url: z.string(),
-    threatLevel: z.enum(['high', 'medium', 'low']),
-    verdict: z.string(),
-  })).optional(),
+    url: z.string().default(''),
+    threatLevel: confidenceLevel,
+    verdict: z.string().default(''),
+  })).optional().default([]),
   competitors: z.array(z.object({
-    name: z.string(),
-    url: z.string().optional(),
-    revenue: z.string(),
-    traffic: z.string(),
-    primaryMarketingPillar: z.string(),
-    pricing: z.string(),
-    pricingAnchors: z.array(z.string()),
-    moatAudit: z.array(z.string()),
-    strengths: z.array(z.string()),
-    weaknesses: z.array(z.string()),
-  })),
+    name: z.string().default(''),
+    url: z.string().optional().default(''),
+    revenue: z.string().default(''),
+    traffic: z.string().default(''),
+    primaryMarketingPillar: z.string().default(''),
+    pricing: z.string().default(''),
+    pricingAnchors: z.array(z.string()).default([]),
+    moatAudit: z.array(z.string()).default([]),
+    strengths: z.array(z.string()).default([]),
+    weaknesses: z.array(z.string()).default([]),
+  })).default([]),
   differentiationVectors: z.array(z.object({
-    vector: z.string(),
-    howToWin: z.string(),
-    priority: z.enum(['primary', 'secondary']),
-  })),
+    vector: z.string().default(''),
+    howToWin: z.string().default(''),
+    priority: z.preprocess(
+      (val) => String(val || 'secondary').toLowerCase(),
+      z.enum(['primary', 'secondary'])
+    ).catch('secondary'),
+  })).default([]),
   failedCompetitors: z.array(failedCompetitorSchema).optional().default([]),
-  marketGaps: z.array(citedClaim),
-  seoWhiteSpace: z.array(z.object({ keyword: z.string(), difficulty: z.string(), opportunity: z.string() })),
-  pricingSpectrum: z.object({ low: z.string(), mid: z.string(), high: z.string(), yourSweetSpot: z.string() }),
-  substituteThreats: z.array(z.object({ substitute: z.string(), linkedJob: z.string(), risk: z.string() })),
-  competitorVelocity: z.array(z.object({ competitor: z.string(), momentum: z.enum(['surging', 'stable', 'losing_ground']), direction: z.string() })),
-  notFound: z.array(z.string()).min(1).default(["No additional limitations identified"]),
-});
+  marketGaps: z.array(citedClaim).default([]),
+  seoWhiteSpace: z.array(z.object({ keyword: z.string().default(''), difficulty: z.string().default(''), opportunity: z.string().default('') })).default([]),
+  pricingSpectrum: z.object({ low: z.string().default(''), mid: z.string().default(''), high: z.string().default(''), yourSweetSpot: z.string().default('') }).default({ low: '', mid: '', high: '', yourSweetSpot: '' }),
+  substituteThreats: z.array(z.object({ substitute: z.string().default(''), linkedJob: z.string().default(''), risk: z.string().default('') })).default([]),
+  competitorVelocity: z.array(z.object({ competitor: z.string().default(''), momentum: z.preprocess((val)=>String(val || 'stable').toLowerCase(), z.enum(['surging', 'stable', 'losing_ground'])).catch('stable'), direction: z.string().default('') })).default([]),
+  notFound: z.array(z.string()).default([]),
+}).default({});
 export type Layer4 = z.infer<typeof layer4Schema>;
 
-// -- Layer 5: Unit Economics --
+// ========== LAYER 5: UNIT ECONOMICS ==========
 
 export const layer5Schema = z.object({
   cacBenchmark: z.object({
-    range: z.string(),
-    channelBreakdown: z.array(z.object({ channel: z.string(), estCAC: z.string() })),
-    sources: z.array(z.coerce.string()).optional().default([]),
+    range: z.string().default(''),
+    channelBreakdown: z.array(z.object({ channel: z.string().default(''), estCAC: z.string().default('') })).default([]),
+    sources: z.array(z.coerce.string()).default([]),
     confidence: confidenceLevel,
-  }),
+  }).default({ range: '', sources: [] }),
   ltvBenchmark: z.object({
-    range: z.string(),
-    churnRate: z.string(),
-    nrrExpansionPotential: z.string(),
+    range: z.string().default(''),
+    churnRate: z.string().default(''),
+    nrrExpansionPotential: z.string().default(''),
     confidence: confidenceLevel,
-  }),
+  }).default({ range: '', churnRate: '', nrrExpansionPotential: '' }),
   paybackPeriod: z.object({
-    months: z.number(),
-    verdict: z.string(),
-  }),
+    months: z.coerce.number().default(0),
+    verdict: z.string().default(''),
+  }).default({ months: 0, verdict: '' }),
   grossMarginHealth: z.object({
-    marginPercentage: z.number(),
-    aiCogsEstimate: z.string(),
-    reasoning: z.string(),
-  }),
+    marginPercentage: percentSchema,
+    aiCogsEstimate: z.string().default(''),
+    reasoning: z.string().default(''),
+  }).default({ marginPercentage: 0, aiCogsEstimate: '', reasoning: '' }),
   ltvCacVerdict: z.object({
-    ratio: z.string(),
-    verdict: z.string(),
-  }),
+    ratio: z.string().default(''),
+    verdict: z.string().default(''),
+  }).default({ ratio: '', verdict: '' }),
   breakEven: z.object({
-    timeline: z.string(),
-    assumptions: z.array(z.string()),
-  }),
+    timeline: z.string().default(''),
+    assumptions: z.array(z.string()).default([]),
+  }).default({ timeline: '', assumptions: [] }),
   runwaySensitivityMatrix: z.array(z.object({
-    toggle: z.string(),
-    impactOnRunway: z.string(),
-  })),
+    toggle: z.string().default(''),
+    impactOnRunway: z.string().default(''),
+  })).default([]),
   optimalPricePoint: z.object({
-    price: z.string(),
-    reasoning: z.string(),
-  }),
-  notFound: z.array(z.string()).min(1).default(["No additional limitations identified"]),
-});
+    price: z.string().default(''),
+    reasoning: z.string().default(''),
+  }).default({ price: '', reasoning: '' }),
+  notFound: z.array(z.string()).default([]),
+}).default({});
 export type Layer5 = z.infer<typeof layer5Schema>;
 
-// -- Layer 6: Offer & GTM --
+// ========== LAYER 6: OFFER & GTM ==========
 
 export const layer6Schema = z.object({
   offerIdeas: z.array(z.object({
-    offer: z.string(),
-    pricingLogic: z.string(),
-    incentiveStacking: z.array(z.string()),
+    offer: z.string().default(''),
+    pricingLogic: z.string().default(''),
+    incentiveStacking: z.array(z.string()).default([]),
     confidence: confidenceLevel,
-  })),
+  })).default([]),
   unscalablePlaybook: z.array(z.object({
-    tactic: z.string(),
-    actionableStep: z.string(),
-    expectedOutcome: z.string(),
-  })),
+    tactic: z.string().default(''),
+    actionableStep: z.string().default(''),
+    expectedOutcome: z.string().default(''),
+  })).default([]),
   gtmRoadmap: z.array(z.object({
-    phase: z.string(),
-    focus: z.string(),
-    actions: z.array(z.string()),
-    successMetrics: z.array(z.string()),
-  })),
+    phase: z.string().default(''),
+    focus: z.string().default(''),
+    actions: z.array(z.string()).default([]),
+    successMetrics: z.array(z.string()).default([]),
+  })).default([]),
   creativeHooks: z.array(z.object({
-    channel: z.string(),
-    hookTemplate: z.string(),
-    angle: z.string(),
-  })),
+    channel: z.string().default(''),
+    hookTemplate: z.string().default(''),
+    angle: z.string().default(''),
+  })).default([]),
   growthLoops: z.array(z.object({
-    loopType: z.string(),
-    mechanism: z.string(),
-    viralPotential: z.string(),
-  })),
+    loopType: z.string().default(''),
+    mechanism: z.string().default(''),
+    viralPotential: z.string().default(''),
+  })).default([]),
   channelMap: z.array(z.object({
-    channel: z.string(),
-    effectiveness: z.string(),
-    primaryMarketingPillar: z.string().optional(),
-  })),
+    channel: z.string().default(''),
+    effectiveness: z.string().default(''),
+    primaryMarketingPillar: z.string().optional().default(''),
+  })).default([]),
   revenueModelFit: z.array(z.object({
-    model: z.string(),
-    fit: z.string(),
+    model: z.string().default(''),
+    fit: z.string().default(''),
     reasoning: z.string().optional().default(''),
-  })),
-  notFound: z.array(z.string()).min(1).default(["No additional limitations identified"]),
-});
+  })).default([]),
+  notFound: z.array(z.string()).default([]),
+}).default({});
 export type Layer6 = z.infer<typeof layer6Schema>;
 
-// -- Layer 7: Anti-Commoditisation --
+// ========== LAYER 7: ANTI-COMMODITISATION ==========
 
 export const layer7Schema = z.object({
   counterPositioning: z.array(z.object({
-    incumbentWeakness: z.string(),
-    userCounterStrategy: z.string(),
-    reasoning: z.string(),
-  })),
+    incumbentWeakness: z.string().default(''),
+    userCounterStrategy: z.string().default(''),
+    reasoning: z.string().default(''),
+  })).default([]),
   moats: z.array(z.object({
-    type: z.string(),
-    strategy: z.string(),
-    implementation: z.string(),
-    decayRisk: z.enum(['high', 'medium', 'low']),
-    aiResilience: z.string(),
+    type: z.string().default(''),
+    strategy: z.string().default(''),
+    implementation: z.string().default(''),
+    decayRisk: confidenceLevel,
+    aiResilience: z.string().default(''),
     confidence: confidenceLevel,
-  })),
+  })).default([]),
   moatFlywheel: z.array(z.object({
-    phase: z.string(),
-    moatFocus: z.string(),
-    howItScales: z.string(),
-  })),
+    phase: z.string().default(''),
+    moatFocus: z.string().default(''),
+    howItScales: z.string().default(''),
+  })).default([]),
   migrationFrictionScore: z.object({
-    score: z.number().min(0).max(10),
-    frictionFactors: z.array(z.string()),
-    verdict: z.string(),
-  }),
-  notFound: z.array(z.string()).min(1).default(["No additional limitations identified"]),
-});
+    score: resilientScore10,
+    frictionFactors: z.array(z.string()).default([]),
+    verdict: z.string().default(''),
+  }).default({ score: 0, frictionFactors: [], verdict: '' }),
+  notFound: z.array(z.string()).default([]),
+}).default({});
 export type Layer7 = z.infer<typeof layer7Schema>;
 
-// -- Layer 8: Persona-Specific --
+// ========== LAYER 8: PERSONA-SPECIFIC ==========
 
 export const layer8Schema = z.object({
   modules: z.array(z.object({
-    title: z.string(),
-    content: z.string(),
+    title: z.string().default(''),
+    content: z.string().default(''),
     confidence: confidenceLevel,
-    sources: z.array(z.coerce.string()).optional().default([]),
-  })),
-  notFound: z.array(z.string()).min(1).default(["No additional limitations identified"]),
-});
+    sources: z.array(z.coerce.string()).default([]),
+  })).default([]),
+  notFound: z.array(z.string()).default([]),
+}).default({});
 export type Layer8 = z.infer<typeof layer8Schema>;
 
-// -- Tri-Agent Debate --
+// ========== TRI-AGENT DEBATE ==========
 
 export const agentVerdictSchema = z.object({
-  score: z.number().min(0).max(100),
-  signal: z.string(),
-  reasoning: z.string(),
-  keyPoints: z.array(z.string()),
-});
+  score: resilientScore,
+  signal: z.string().default('GO'),
+  reasoning: z.string().default(''),
+  keyPoints: z.array(z.string()).default([]),
+}).default({ score: 50, signal: 'GO', keyPoints: [] });
 export type AgentVerdict = z.infer<typeof agentVerdictSchema>;
 
 export const debateResultSchema = z.object({
   builder: agentVerdictSchema,
   cynic: agentVerdictSchema,
   operator: agentVerdictSchema,
-  finalVerdict: z.string(),
-  compositeScore: z.number(),
-  clashPoints: z.array(z.string()),
+  finalVerdict: z.string().default('Conditional Proceed'),
+  compositeScore: resilientScore,
+  clashPoints: z.array(z.string()).default([]),
   milestones: z.array(z.object({
-    condition: z.string(),
-    action: z.string(),
-  })),
+    condition: z.string().default(''),
+    action: z.string().default(''),
+  })).default([]),
   contradictoryCertainty: z.boolean().optional().default(false),
-});
+}).default({});
 export type DebateResult = z.infer<typeof debateResultSchema>;
 
-// -- Auto-Pivot --
+// ========== AUTO-PIVOT ==========
 
 export const pivotOptionSchema = z.object({
-  rank: z.string(),
-  title: z.string(),
-  description: z.string(),
-  newSaturation: z.number().min(0).max(100),
-  executionFit: z.string(),
-  reasoning: z.string(),
-});
+  rank: z.string().default('1'),
+  title: z.string().default('Pivot Option'),
+  description: z.string().default(''),
+  newSaturation: percentSchema,
+  executionFit: z.string().default(''),
+  reasoning: z.string().default(''),
+}).default({});
 export type PivotOption = z.infer<typeof pivotOptionSchema>;
 
 export const autoPivotSchema = z.object({
-  triggered: z.boolean(),
-  reason: z.string(),
-  pivots: z.array(pivotOptionSchema),
-});
+  triggered: z.boolean().default(false),
+  reason: z.string().default(''),
+  pivots: z.array(pivotOptionSchema).default([]),
+}).default({ triggered: false, reason: '', pivots: [] });
 export type AutoPivotResult = z.infer<typeof autoPivotSchema>;
 
-// -- Verdict & Intelligence Metadata --
+// ========== META & FULL REPORT ==========
 
 export interface ReportVerdict {
   label: 'GO' | 'PROCEED_WITH_CAUTION' | 'DO_NOT_PROCEED';
@@ -420,8 +488,6 @@ export interface ContentSuppression {
   reason: string;
 }
 
-// -- Full Report --
-
 export interface FullReport {
   id: string;
   niche: string;
@@ -441,7 +507,6 @@ export interface FullReport {
   autoPivot?: AutoPivotResult;
   sources: { url: string; title: string; confidence: ConfidenceLevel }[];
   generatedAt: string;
-  // v5: Intelligence metadata
   verdict?: ReportVerdict;
   fatalFlags?: string[];
   layerReliability?: Record<string, LayerReliabilityScore>;
