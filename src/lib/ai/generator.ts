@@ -249,7 +249,12 @@ export async function generateReport(
           cynicScore,
           research,
           userContext,
-          intake.geography
+          intake.geography,
+          {
+            clashPoints: report.debate?.clashPoints || [],
+            fatalFlags: report.fatalFlags || [],
+            cynicReasoning: report.debate?.cynic?.reasoning || ''
+          }
         );
         onProgress?.({ step: 'pivot', status: 'complete' });
       } catch (err) {
