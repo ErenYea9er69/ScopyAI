@@ -236,22 +236,24 @@ export function layer3Prompt(
 ) {
   const system = `
 You are the Survival Intelligence module — the adversarial risk detector.
-Your job is to identify every threat that could kill this idea.
-Name specific AI models, specific platforms, specific competitors.
-Cross-reference the user's budget and skills against execution difficulty.
+Your job is to identify every threat that could kill this idea, from AI native "Sherlocking" to regulatory fatal blockers.
 
 ${DATA_INTEGRITY_RULES}
 
 OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers).
 {
   "dyingTrendSignals": [ { "claim": "string", "source": "string", "confidence": "high|medium|low" } ],
+  "nativeObsolescence": { "probability": 0, "threateningFeature": "string", "timeframe": "string", "reasoning": "string" },
   "aiDisruptionRisk": { "score": 0, "threateningModel": "string", "valueAtRisk": "string", "confidence": "high|medium|low" },
   "platformDependency": { "score": 0, "primaryPlatform": "string", "risk": "string" },
+  "platformComplianceRisk": { "appleGoogleRisk": "string", "apiProviderRisk": "string", "mitigation": "string" },
   "saturationScore": { "percentage": 0, "reasoning": "string" },
+  "redLineBlockers": [ { "fact": "string", "blocker": "string", "severity": "fatal|critical" } ],
   "legalMatrix": [ { "jurisdiction": "string", "status": "string", "risk": "string" } ],
   "gorillaCompetitors": [ { "name": "string", "threat": "string", "defence": "string" } ],
   "executionDifficulty": { "score": 0, "blockers": ["string"] },
-  "scenarioSimulator": [ { "threat": "string", "probability": "string", "consequence": "string" } ],
+  "pivotBuffer": { "score": 0, "runwayUnits": "string", "reasoning": "string" },
+  "scenarioSimulator": [ { "threat": "string", "probability": "string", "consequence": "string", "cascadingEffect": "string" } ],
   "notFound": ["string"]
 }
 `.trim();
@@ -268,52 +270,30 @@ WHY NOW: ${userContext.whyNow || 'Not specified'}
 === RESEARCH DATA ===
 ${researchBlock([...research.trends, ...research.regulations, ...research.competitors])}
 
-Be ruthlessly honest. Name the specific AI model that threatens this niche.
-Score saturation 0-100. Score execution difficulty 0-100 against this specific user's resources.
-If the user provided a "WHY NOW" signal, cross-reference it against regulatory timelines and competitive shifts.
+Based on the research, produce Layer 3 Survival Intelligence.
 
-BUDGET vs REQUIREMENTS REALITY CHECK:
-- For EVERY blocker you identify, estimate its cost to resolve.
-- If ANY SINGLE blocker costs more than the user's total stated budget, flag it as a FATAL EXECUTION BLOCKER and set executionDifficulty score to at least 85.
-- If the product requires third-party APIs that are NOT publicly available, or hardware/sensors that must be purchased and distributed, calculate the total dependency cost separately.
-- If total dependency costs exceed the user's budget, executionDifficulty.blockers MUST lead with this as the #1 blocker: "Core dependency cost ($X) exceeds total budget ($Y)".
-- Regulatory/compliance costs (HIPAA, GDPR, MHRA, FDA) must be estimated and compared against budget. If compliance alone exceeds 50% of the budget, this is a blocker.
+AI NATIVE OBSOLESCENCE (SHERLOCKING RISK):
+- Quantify the probability (0-100%) that major LLM providers (OpenAI, Google, Apple, Microsoft) will build this core value proposition as a native system feature within 12 months.
+- Identify the specific feature name (e.g., "Apple Intelligence Memory" vs "Personal Journal App").
 
-DEFUNCT COMPETITOR WARNING:
-- If ANY competitor data contains [⚠️ DEFUNCT] tags, this is a CRITICAL signal.
-- A well-funded competitor that failed at the same thesis means the market REJECTED this approach. Do NOT treat their absence as a "market gap".
-- Factor their failure into your saturationScore reasoning and scenarioSimulator.
+RED-LINE BLOCKERS:
+- Compare the USER BUDGET and USER TIME against the research data.
+- If a regulatory cost (e.g., MHRA/FDA compliance) or technical requirement costs more than the user's budget, YOU MUST flag it as a "fatal" blocker here.
+- Example: "Fact: FDA 510(k) costs ~$50k-$200k | Blocker: Budget is $5,000 | Severity: fatal"
 
-BIG-COMPANY RETREAT = DANGER SIGNAL:
-- If a major tech company (Apple, Google, Amazon, Meta, Microsoft) RETREATED from this product category, this is a NEGATIVE signal, NOT a positive one.
-- Their retreat means the category is harder to build and monetise than it appears, NOT that competition decreased.
-- If the research data mentions a big-company pullback, increase your aiDisruptionRisk or executionDifficulty scores accordingly and explain WHY they retreated.
+CASCADING RISKS (SCENARIO SIMULATOR):
+- Instead of isolated threats, think in chains. 
+- Example: "Threat: API pricing increase -> Consequence: Unit economics break -> Cascading Effect: Requires immediate $10k pivot or shutdown."
 
-SATURATION SCORE METHODOLOGY:
-- saturationScore percentage MUST be based on SPECIFIC EVIDENCE from the research data: competitor count, search volume data, market share distribution, or keyword competition scores.
-- If you cannot cite specific quantitative evidence for your saturation score, set percentage to -1 (meaning UNKNOWN, not zero) and reasoning to "Insufficient quantitative data to calculate saturation reliably. [N] competitors found in research data but no market share or search volume data available. -1 indicates UNKNOWN, not empty."
-- Do NOT assign a saturation percentage based on vibes or the existence of adjacent-market competitors. Only DIRECT competitors in the same niche count.
-- IMPORTANT: saturation 0% means "verified empty market with zero competitors". If you found ANY competitors in the research data, 0% is WRONG. Use at minimum: 1-2 competitors = 15-25%, 3-5 competitors = 30-50%, 6+ competitors = 50-75%.
-- If platform partner data contains [🏷️ PLATFORM PARTNER] tags, those companies are ESTABLISHED players with OFFICIAL endorsements. Factor them heavily into saturation.
+PLATFORM COMPLIANCE:
+- Evaluate risk from Apple/Google App Store policies (especially for AI/Health) and API provider TOS (e.g., OpenAI's medical advice restrictions).
 
-EXECUTION DIFFICULTY SCORE CONSISTENCY (HARD CONSTRAINT):
-- After generating your blockers list, RE-READ every blocker.
-- If ANY blocker contains the words "fatal", "impossible", "exceeds budget", "exceeds total budget", "MHRA", "FDA", "cannot be built", or costs more than the user's stated budget, your executionDifficulty score MUST be ≥ 80.
-- A score below 50 with any fatal blocker is a FORBIDDEN OUTPUT. The system will override it.
-- If the Operator agent would rate this as IMPOSSIBLE, your score must be ≥ 80.
+PIVOT BUFFER:
+- Score 0-10 how much operational "room" this user has with their specific budget/assets to change their thesis if the first version fails.
 
-REGULATORY COST REALITY CHECK:
-- UK MHRA Class II medical device classification: £30,000-£100,000+ and 12-24 months minimum for first-time applicant (NOT £3,000-£8,000).
-- Requires: clinical evidence, Conformity Assessment, UK Responsible Person, MHRA registration.
+REGULATORY COST REALITY CHECK (REMINDER):
+- UK MHRA Class II: £30,000-£100,000+ and 12-24 months.
 - US FDA 510(k): $50,000-$200,000+ and 6-18 months.
-- If the idea involves health claims (inflammation management, recovery optimization, metabolic coaching), state: "MHRA pre-market review is PROBABLE, not just possible."
-- These costs are NON-NEGOTIABLE line items. They cannot be deferred to "later" — marketing with health claims before MHRA review risks enforcement action.
-
-FOUNDER FIT WEIGHTING:
-- If the user checked 4+ founder-fit statements, reduce executionDifficulty score by 15-20 points (they have strong leverage).
-- If the user checked 0-1 statements, increase executionDifficulty score by 10 points (low founder-market fit).
-- Factor specific fit statements: "domain expertise" reduces research costs, "technical advantage" reduces build costs, "experienced pain point" increases conviction.
-- NOTE: Founder fit adjustments are OVERRIDDEN by the consistency constraint above. If fatal blockers exist, the score stays ≥ 80 regardless of founder fit.
 `.trim();
 
   return { system, user };

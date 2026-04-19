@@ -316,7 +316,8 @@ function buildBatch1Summary(layers: FullReport['layers']): string {
     const satPct = l3.saturationScore?.percentage ?? 0;
     const satDisplay = satPct === -1 ? 'UNKNOWN (insufficient data)' : `${satPct}%`;
     parts.push(`[RISK] Saturation: ${satDisplay} — ${l3.saturationScore?.reasoning || ''}`);
-    parts.push(`[RISK] AI disruption: ${l3.aiDisruptionRisk?.score || 0}/10 — ${l3.aiDisruptionRisk?.threateningModel || 'None identified'}`);
+    parts.push(`[RISK] AI Native Obsolescence: ${l3.nativeObsolescence?.probability || 0}% risk — ${l3.nativeObsolescence?.threateningFeature || 'None'}`);
+    parts.push(`[RISK] Red-Line Blockers: ${l3.redLineBlockers?.map(b => b.blocker).join('; ') || 'None'}`);
     parts.push(`[RISK] Execution difficulty: ${l3.executionDifficulty?.score || 0}/100`);
     parts.push(`[RISK] Gorilla competitors: ${l3.gorillaCompetitors?.map(g => g.name).join(', ') || 'None identified'}`);
   } else {
@@ -382,7 +383,8 @@ function buildLayerSummary(layers: FullReport['layers']): string {
     const satPct = layers.layer3.saturationScore?.percentage ?? 0;
     const satDisplay = satPct === -1 ? 'UNKNOWN' : `${satPct}%`;
     parts.push(`[L3 RISK] Saturation: ${satDisplay}`);
-    parts.push(`[L3 RISK] AI disruption: ${layers.layer3.aiDisruptionRisk?.score || 0}/10`);
+    parts.push(`[L3 RISK] AI Native Risk: ${layers.layer3.nativeObsolescence?.probability || 0}%`);
+    parts.push(`[L3 RISK] Red-Lines: ${layers.layer3.redLineBlockers?.length || 0} fatal/critical blockers`);
     parts.push(`[L3 RISK] Execution difficulty: ${layers.layer3.executionDifficulty?.score || 0}/100`);
   }
 

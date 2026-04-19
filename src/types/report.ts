@@ -116,6 +116,12 @@ export type Layer2 = z.infer<typeof layer2Schema>;
 
 export const layer3Schema = z.object({
   dyingTrendSignals: z.array(citedClaim),
+  nativeObsolescence: z.object({
+    probability: z.number().min(0).max(100),
+    threateningFeature: z.string(),
+    timeframe: z.string(),
+    reasoning: z.string(),
+  }),
   aiDisruptionRisk: z.object({
     score: z.number().min(0).max(10),
     threateningModel: z.string(),
@@ -127,10 +133,20 @@ export const layer3Schema = z.object({
     primaryPlatform: z.string(),
     risk: z.string(),
   }),
+  platformComplianceRisk: z.object({
+    appleGoogleRisk: z.string(),
+    apiProviderRisk: z.string(),
+    mitigation: z.string(),
+  }),
   saturationScore: z.object({
     percentage: z.number().min(-1).max(100),
     reasoning: z.string(),
   }),
+  redLineBlockers: z.array(z.object({
+    fact: z.string(),
+    blocker: z.string(),
+    severity: z.enum(['fatal', 'critical']),
+  })),
   legalMatrix: z.array(z.object({
     jurisdiction: z.string(),
     status: z.string(),
@@ -145,10 +161,16 @@ export const layer3Schema = z.object({
     score: z.number().min(0).max(100),
     blockers: z.array(z.string()),
   }),
+  pivotBuffer: z.object({
+    score: z.number().min(0).max(10),
+    runwayUnits: z.string(),
+    reasoning: z.string(),
+  }),
   scenarioSimulator: z.array(z.object({
     threat: z.string(),
     probability: z.string(),
     consequence: z.string(),
+    cascadingEffect: z.string(),
   })),
   notFound: z.array(z.string()).min(1).default(["No additional limitations identified"]),
 });
