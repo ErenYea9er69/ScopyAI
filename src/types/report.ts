@@ -267,14 +267,43 @@ export type Layer5 = z.infer<typeof layer5Schema>;
 // -- Layer 6: Offer & GTM --
 
 export const layer6Schema = z.object({
-  offerIdeas: z.array(z.object({ offer: z.string(), pricingLogic: z.string(), confidence: confidenceLevel })),
-  gtmPlan: z.array(z.object({ week: z.string(), action: z.string(), cost: z.string(), deliverable: z.string().optional().default(''), successMetric: z.string().optional().default('') })),
-  platformHooks: z.array(z.object({ platform: z.string(), hook: z.string(), angle: z.string() })),
-  channelMap: z.array(z.object({ channel: z.string(), effectiveness: z.string(), decaySignal: z.string() })),
-  validationRoadmap: z.array(z.object({ step: z.string(), cost: z.string(), expectedOutcome: z.string() })),
-  futureTrends: z.array(z.object({ trend: z.string(), trigger: z.string(), timing: z.string(), source: z.string().optional().default(''), confidence: z.preprocess((val) => String(val).toLowerCase(), z.enum(['high', 'medium', 'low'])).catch('medium') })),
-  distributionLeverage: z.array(z.object({ lever: z.string(), description: z.string() })),
-  revenueModelFit: z.array(z.object({ model: z.string(), fit: z.string(), reasoning: z.string().optional().default('') })),
+  offerIdeas: z.array(z.object({
+    offer: z.string(),
+    pricingLogic: z.string(),
+    incentiveStacking: z.array(z.string()),
+    confidence: confidenceLevel,
+  })),
+  unscalablePlaybook: z.array(z.object({
+    tactic: z.string(),
+    actionableStep: z.string(),
+    expectedOutcome: z.string(),
+  })),
+  gtmRoadmap: z.array(z.object({
+    phase: z.string(),
+    focus: z.string(),
+    actions: z.array(z.string()),
+    successMetrics: z.array(z.string()),
+  })),
+  creativeHooks: z.array(z.object({
+    channel: z.string(),
+    hookTemplate: z.string(),
+    angle: z.string(),
+  })),
+  growthLoops: z.array(z.object({
+    loopType: z.string(),
+    mechanism: z.string(),
+    viralPotential: z.string(),
+  })),
+  channelMap: z.array(z.object({
+    channel: z.string(),
+    effectiveness: z.string(),
+    primaryMarketingPillar: z.string().optional(),
+  })),
+  revenueModelFit: z.array(z.object({
+    model: z.string(),
+    fit: z.string(),
+    reasoning: z.string().optional().default(''),
+  })),
   notFound: z.array(z.string()).min(1).default(["No additional limitations identified"]),
 });
 export type Layer6 = z.infer<typeof layer6Schema>;

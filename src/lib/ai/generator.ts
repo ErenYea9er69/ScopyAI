@@ -350,7 +350,8 @@ function buildBatch2Summary(layers: FullReport['layers']): string {
 
   if (layers.layer6) {
     parts.push(`[GTM] Top channels: ${layers.layer6.channelMap?.slice(0, 3).map(c => c.channel).join(', ') || '?'}`);
-    parts.push(`[GTM] Revenue model: ${layers.layer6.revenueModelFit?.slice(0, 1).map(r => `${r.model} (${r.fit})`).join('') || '?'}`);
+    parts.push(`[GTM] Unscalable Tactic: ${layers.layer6.unscalablePlaybook?.slice(0, 1).map(t => t.tactic).join('') || '?'}`);
+    parts.push(`[GTM] Growth Loop: ${layers.layer6.growthLoops?.slice(0, 1).map(l => l.loopType).join('') || '?'}`);
   }
 
   if (layers.layer7) {
@@ -404,8 +405,10 @@ function buildLayerSummary(layers: FullReport['layers']): string {
   }
 
   if (layers.layer6) {
-    parts.push(`[L6 GTM] Channels: ${layers.layer6.channelMap?.slice(0, 3).map(c => c.channel).join(', ') || '?'}`);
-    parts.push(`[L6 GTM] Revenue models: ${layers.layer6.revenueModelFit?.slice(0, 2).map(r => `${r.model} (${r.fit})`).join(', ') || '?'}`);
+    parts.push(`[L6 GTM] Primary Hook: ${layers.layer6.creativeHooks?.slice(0, 1).map(h => h.angle).join('') || '?'}`);
+    parts.push(`[L6 GTM] "First 10" Playbook: ${layers.layer6.unscalablePlaybook?.length || 0} manual tactics`);
+    parts.push(`[L6 GTM] Growth Loop mechanism: ${layers.layer6.growthLoops?.slice(0, 1).map(l => l.mechanism).join('') || '?'}`);
+    parts.push(`[L6 GTM] Phase 1 Focus: ${layers.layer6.gtmRoadmap?.slice(0, 1).map(r => r.focus).join('') || '?'}`);
   }
 
   if (layers.layer7) {

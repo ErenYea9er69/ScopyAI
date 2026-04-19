@@ -469,32 +469,19 @@ export function layer6Prompt(
   batch1Context: string = ''
 ) {
   const system = `
-You are the Offer & GTM module. Generate concrete offer ideas with pricing logic,
-a week-by-week GTM plan, platform-specific hooks, channel map with decay signals,
-validation roadmap with costs, future trends, distribution leverage, and revenue model fit.
+You are the Offer & GTM (Go-To-Market) module.
+Your job is to transform a product into an Irresistible Offer and map the "Hand-to-Hand Combat" path to the first 10 customers.
 
 ${DATA_INTEGRITY_RULES}
 
-GEOGRAPHY-AWARE RULES:
-- Tailor ALL channel recommendations to platforms actually used in ${geo}.
-- If the market speaks a non-English language, note this and adjust channel strategy accordingly.
-- Do NOT recommend channels that don't work in the target geography (e.g., "Reddit" for Tunisia, "Yelp" for Japan).
-- Consider local payment methods, social platforms, and cultural buying behavior.
-
-GTM PLAN RULES:
-- Each week MUST end with a measurable deliverable. "Post on Twitter" is NOT a deliverable.
-- "50 cold DMs sent with 5% response rate" IS a deliverable.
-- Each week must include a cost and a success metric that proves whether the action worked.
-
 OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers).
 {
-  "offerIdeas": [ { "offer": "string", "pricingLogic": "string", "confidence": "high|medium|low" } ],
-  "gtmPlan": [ { "week": "string", "action": "string", "cost": "string", "deliverable": "string", "successMetric": "string" } ],
-  "platformHooks": [ { "platform": "string", "hook": "string", "angle": "string" } ],
-  "channelMap": [ { "channel": "string", "effectiveness": "string", "decaySignal": "string" } ],
-  "validationRoadmap": [ { "step": "string", "cost": "string", "expectedOutcome": "string" } ],
-  "futureTrends": [ { "trend": "string", "trigger": "string", "timing": "string", "source": "string", "confidence": "high|medium|low" } ],
-  "distributionLeverage": [ { "lever": "string", "description": "string" } ],
+  "offerIdeas": [ { "offer": "string", "pricingLogic": "string", "incentiveStacking": ["string"], "confidence": "high|medium|low" } ],
+  "unscalablePlaybook": [ { "tactic": "string", "actionableStep": "string", "expectedOutcome": "string" } ],
+  "gtmRoadmap": [ { "phase": "string", "focus": "string", "actions": ["string"], "successMetrics": ["string"] } ],
+  "creativeHooks": [ { "channel": "string", "hookTemplate": "string", "angle": "string" } ],
+  "growthLoops": [ { "loopType": "string", "mechanism": "string", "viralPotential": "string" } ],
+  "channelMap": [ { "channel": "string", "effectiveness": "string", "primaryMarketingPillar": "string" } ],
   "revenueModelFit": [ { "model": "string", "fit": "string", "reasoning": "string" } ],
   "notFound": ["string"]
 }
@@ -506,64 +493,44 @@ GEOGRAPHY: ${geo}
 USER BUDGET: ${userContext.budget}
 USER TIME: ${userContext.time}
 USER ASSETS: ${userContext.assets.join(', ') || 'None specified'}
-PREFERRED ACQUISITION CHANNEL: ${userContext.acquisitionChannel || 'Not specified — recommend the best channel for this niche'}
-PREFERRED REVENUE MODEL: ${userContext.revenueModel || 'Not specified — recommend the best model'}
-BUYER TYPE: ${userContext.buyerType || 'Not specified — infer from niche'}
 GOAL TIMELINE: ${userContext.goalTimeline || 'Not specified'}
 
 ${batch1Context}
 
-=== RESEARCH DATA (Market + Competitors + Pain Points) ===
-${researchBlock([...research.marketSize, ...research.competitors, ...research.painPoints])}
+=== RESEARCH DATA ===
+${researchBlock([...research.marketSize, ...research.competitors, ...research.painPoints, ...research.trends])}
 
-=== TREND DATA ===
-${researchBlock(research.trends)}
+Based on the research, produce Layer 6 Offer & GTM Strategy.
 
-IMPORTANT:
-- Your GTM plan MUST be consistent with the upstream market and risk data above.
-- If the market is saturated (per upstream), your GTM should focus on differentiation, not volume.
-- Align channel recommendations to the user's budget — don't recommend paid ads to a bootstrapped user.
-- If the user specified a goal timeline (e.g., "Revenue in 30 days"), the GTM plan weeks MUST fit within that window. A 90-day plan for a 30-day timeline is useless.
-- If the user specified an acquisition channel, build the GTM plan around THAT channel primarily.
-- GTM costs must reference the user's actual budget. Don't suggest $5k ad spend for someone with $500.
-- futureTrends MUST be derived from the TREND DATA section, not invented.
+PSYCHOLOGICAL OFFER STACKING:
+- Don't just list a price. Create an "Irresistible Offer".
+- Use "Incentive Stacking": Guarantees (risk reversal), Bonuses (value stacking), and Scarcity/Urgency triggers tailored to this niche.
 
-CONVERSION RATE REALITY ANCHORING (HARD CAPS — EXCEEDING THESE IS FORBIDDEN):
-- These are MAXIMUM conversion rates. You MUST NOT use any rate above these ceilings:
-  * Cold email/LinkedIn reply rate: MAX 8% (typical: 2-5%)
-  * Cold outreach to business owners (gym owners, box owners): MAX 5% (typical: 1-3%)
-  * Workshop/webinar-to-paid conversion: MAX 10% (typical: 3-8%)
-  * Landing page visitor-to-signup: MAX 5% (typical: 2-4%)
-  * Paid ad CTR: MAX 3% (search), MAX 1.5% (social)
-  * Weekly user retention: MAX 50% for unproven products (typical: 30-40%)
-  * Partnership conversion from cold outreach: MAX 8% (typical: 2-5%)
-- These are ABSOLUTE CEILINGS. Using a rate above these without peer-reviewed evidence is a FORBIDDEN OUTPUT.
-- If your GTM plan requires higher conversion rates to achieve its targets, the targets are wrong — reduce them.
+THE "FIRST 10" MANUAL PLAYBOOK:
+- Generate 3 specific, **unscalable** tactics to get the first 10 customers.
+- Examples: Direct DM scripts, community hunting (Subreddits/FB Groups), manual cold-calling, localized events.
+- DO NOT suggest ads for the first 10 customers if the budget is under $1k.
+
+MILESTONE-BASED ROADMAP:
+- Instead of a generic calendar, use a 3-Phase evolution:
+  1. Phase 1: Validation & Feedback (Manual, low cost).
+  2. Phase 2: Alpha/Value-Demonstration (Small scale, high touch).
+  3. Phase 3: Public Scaling (Systematized acquisition).
+
+CREATIVE HOOK TEMPLATES:
+- For the top 3 channels, provide high-velocity hook templates (e.g., "The Problem/Solution Hook" or "The Hidden Cost of [Status Quo]").
+
+GROWTH LOOPS (PLG):
+- Identify how one user naturally brings another (Referral engines, embedded networks, or content-sharing triggers).
+
+CONVERSION RATE REALITY ANCHORING:
+- YOU MUST use pessimistic conversion rates:
+  * Cold Outreach Reply: 2-5%
+  * Landing Page conversion: 2-3%
+  * Paid Ad CTR: 1-1.5%
 
 GTM TOTAL SPEND CAP:
-- Sum ALL costs across your entire GTM plan (every week's cost + validation roadmap costs).
-- If this total exceeds the user's stated budget, STOP and restructure.
-- A GTM plan that costs more than the user has is fiction. List the total GTM cost explicitly.
-- Hardware subsidies, sensor costs, and sample products count as GTM costs.
-
-ANTI-WISHFUL-THINKING RULE:
-- Each GTM week must include both a TARGET outcome and a PESSIMISTIC scenario.
-- The PESSIMISTIC scenario must use the LOWER END of the conversion rate ceilings above.
-- Example: "Target: 5 partnerships at 5% conversion from 100 outreach. Pessimistic: 1-2 partnerships at 2% conversion. Fallback if pessimistic: [specific action]."
-- If the GTM plan depends on distributor partnerships, supplier negotiations, or API access that the user doesn't currently have, flag the lead time: "Partnership negotiations typically take 3-6 months. Budget accordingly."
-
-DISTRIBUTION LEVERAGE HONESTY:
-- Do NOT list platform-partnered competitors as "distribution leverage" opportunities.
-- If a platform (e.g., CrossFit) has already chosen an official partner for this category, that channel is CLOSED to the user.
-- Only list distribution levers that the user can actually access without requiring permission from a platform that has already chosen a competitor.
-
-CHANNEL PARTNERSHIP CONFLICT CHECK (CRITICAL):
-- For EACH GTM channel you recommend, check if the competitor data contains [🏷️ PLATFORM PARTNER] tags for companies that have official partnerships with that channel's platform.
-- If yes, you MUST:
-  (a) Downgrade that channel's effectiveness rating to "LOW — partnership conflict".
-  (b) Add to channelMap entry: "⚠️ PARTNERSHIP CONFLICT: [Platform] has an official partnership with [Competitor] as of [date]. This channel is likely locked to new entrants."
-  (c) Do NOT rate a partnership-locked channel as "high" or even "medium" effectiveness.
-- If the user's PRIMARY intended acquisition channel is locked by a platform partnership, this is a FATAL GTM FINDING. Add to notFound: "🚫 FATAL GTM: Primary distribution channel [channel] is locked by official [Platform]-[Competitor] partnership."
+- The total cost across all phases MUST NOT exceed the user budget: ${userContext.budget}.
 `.trim();
 
   return { system, user };
