@@ -223,12 +223,43 @@ export type Layer4 = z.infer<typeof layer4Schema>;
 // -- Layer 5: Unit Economics --
 
 export const layer5Schema = z.object({
-  cacBenchmark: z.object({ range: z.string(), sources: z.array(z.coerce.string()).optional().default([]), confidence: confidenceLevel }),
-  ltvBenchmark: z.object({ range: z.string(), churnRate: z.string(), confidence: confidenceLevel }),
-  ltvCacVerdict: z.object({ ratio: z.string(), verdict: z.string() }),
-  breakEven: z.object({ timeline: z.string(), assumptions: z.array(z.string()) }),
-  burnRateScenarios: z.array(z.object({ scenario: z.string(), monthlyBurn: z.string(), runway: z.string() })),
-  optimalPricePoint: z.object({ price: z.string(), reasoning: z.string() }),
+  cacBenchmark: z.object({
+    range: z.string(),
+    channelBreakdown: z.array(z.object({ channel: z.string(), estCAC: z.string() })),
+    sources: z.array(z.coerce.string()).optional().default([]),
+    confidence: confidenceLevel,
+  }),
+  ltvBenchmark: z.object({
+    range: z.string(),
+    churnRate: z.string(),
+    nrrExpansionPotential: z.string(),
+    confidence: confidenceLevel,
+  }),
+  paybackPeriod: z.object({
+    months: z.number(),
+    verdict: z.string(),
+  }),
+  grossMarginHealth: z.object({
+    marginPercentage: z.number(),
+    aiCogsEstimate: z.string(),
+    reasoning: z.string(),
+  }),
+  ltvCacVerdict: z.object({
+    ratio: z.string(),
+    verdict: z.string(),
+  }),
+  breakEven: z.object({
+    timeline: z.string(),
+    assumptions: z.array(z.string()),
+  }),
+  runwaySensitivityMatrix: z.array(z.object({
+    toggle: z.string(),
+    impactOnRunway: z.string(),
+  })),
+  optimalPricePoint: z.object({
+    price: z.string(),
+    reasoning: z.string(),
+  }),
   notFound: z.array(z.string()).min(1).default(["No additional limitations identified"]),
 });
 export type Layer5 = z.infer<typeof layer5Schema>;

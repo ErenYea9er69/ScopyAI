@@ -343,8 +343,8 @@ function buildBatch2Summary(layers: FullReport['layers']): string {
   }
 
   if (layers.layer5) {
-    parts.push(`[ECONOMICS] CAC: ${layers.layer5.cacBenchmark?.range || '?'} (${layers.layer5.cacBenchmark?.confidence || 'low'})`);
-    parts.push(`[ECONOMICS] Break-even: ${layers.layer5.breakEven?.timeline || '?'}`);
+    parts.push(`[ECONOMICS] Payback: ${layers.layer5.paybackPeriod?.months || '?'} months — ${layers.layer5.paybackPeriod?.verdict || ''}`);
+    parts.push(`[ECONOMICS] Margin: ${layers.layer5.grossMarginHealth?.marginPercentage || 0}% — AI COGS: ${layers.layer5.grossMarginHealth?.aiCogsEstimate || '?'}`);
     parts.push(`[ECONOMICS] Optimal price: ${layers.layer5.optimalPricePoint?.price || '?'}`);
   }
 
@@ -397,7 +397,8 @@ function buildLayerSummary(layers: FullReport['layers']): string {
   }
 
   if (layers.layer5) {
-    parts.push(`[L5 ECONOMICS] CAC: ${layers.layer5.cacBenchmark?.range || '?'} (${layers.layer5.cacBenchmark?.confidence || 'low'})`);
+    parts.push(`[L5 ECONOMICS] Payback: ${layers.layer5.paybackPeriod?.months || '?'} mo — ${layers.layer5.paybackPeriod?.verdict || ''}`);
+    parts.push(`[L5 ECONOMICS] Margin: ${layers.layer5.grossMarginHealth?.marginPercentage || 0}%`);
     parts.push(`[L5 ECONOMICS] LTV:CAC: ${layers.layer5.ltvCacVerdict?.ratio || '?'} — ${layers.layer5.ltvCacVerdict?.verdict || '?'}`);
     parts.push(`[L5 ECONOMICS] Break-even: ${layers.layer5.breakEven?.timeline || '?'}`);
   }
@@ -566,39 +567,14 @@ function validateLayerConsistency(report: FullReport): void {
   // === CHECK 2: Cross-layer budget consistency ===
   if (report.layers.layer5 && report.layers.layer6) {
     const l5 = report.layers.layer5;
-    const l6 = report.layers.layer6;
     
-    // Extract shortest runway from burn rate scenarios
-    const burnScenarios = l5.burnRateScenarios || [];
-    let shortestRunwayMonths: number | null = null;
+    // Check if payback period is dangerously long
+    const paybackMonths = l5.paybackPeriod?.months || 0;
     
-    for (const scenario of burnScenarios) {
-      const runway = scenario.runway || '';
-      // Parse runway strings like "1.8 months", "2 months", "0 months"
-      const runwayMatch = runway.match(/([\d.]+)\s*month/i);
-      if (runwayMatch) {
-        const months = parseFloat(runwayMatch[1]);
-        if (shortestRunwayMonths === null || months < shortestRunwayMonths) {
-          shortestRunwayMonths = months;
-        }
-      }
-    }
-    
-    // Count GTM plan weeks and convert to months
-    const gtmWeeks = l6.gtmPlan?.length || 0;
-    const gtmMonths = gtmWeeks / 4;
-    
-    if (shortestRunwayMonths !== null && shortestRunwayMonths < gtmMonths) {
-      const warning = `🚫 BUDGET-GTM CONTRADICTION: Shortest burn rate scenario shows ${shortestRunwayMonths} months runway, but GTM plan requires ${gtmMonths} months (${gtmWeeks} weeks). The GTM plan is unfundable with the stated budget.`;
-      
-      console.warn(`[Validator] ${warning}`);
-      
-      // Append to both layers
+    if (paybackMonths > 18) {
       if (!l5.notFound) l5.notFound = [];
-      if (!l6.notFound) l6.notFound = [];
-      
+      const warning = `⚠️ ADVISORY: Payback period (${paybackMonths} months) is extremely long. High risk of cash-flow failure before reaching profitability.`;
       if (!l5.notFound.includes(warning)) l5.notFound.push(warning);
-      if (!l6.notFound.includes(warning)) l6.notFound.push(warning);
     }
   }
 

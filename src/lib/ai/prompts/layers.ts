@@ -374,23 +374,21 @@ export function layer5Prompt(
   batch1Context: string = ''
 ) {
   const system = `
-You are the Unit Economics module. Calculate CAC benchmarks, LTV estimates, LTV:CAC verdict,
-break-even timeline, burn rate scenarios using the user's actual budget, and optimal price point.
+You are the Unit Economics module.
+Your job is to quantify the cash-flow health of this business, calculate "AI Gross Margins,"
+and identify the specific payback periods for each acquisition channel.
 
 ${DATA_INTEGRITY_RULES}
 
-CRITICAL CAC/LTV RULES:
-- CAC and LTV benchmarks MUST come from the unit economics research data or competitor pricing data below.
-- If no CAC/LTV data exists in the research, set confidence to "low" and explain: "No unit economics benchmarks found in research data. Estimates are derived from competitor pricing and general industry patterns."
-- Do NOT fabricate specific CAC or churn rate numbers. Ranges with confidence levels are acceptable.
-
 OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers).
 {
-  "cacBenchmark": { "range": "string", "sources": ["string"], "confidence": "high|medium|low" },
-  "ltvBenchmark": { "range": "string", "churnRate": "string", "confidence": "high|medium|low" },
+  "cacBenchmark": { "range": "string", "channelBreakdown": [ { "channel": "string", "estCAC": "string" } ], "sources": ["string"], "confidence": "high|medium|low" },
+  "ltvBenchmark": { "range": "string", "churnRate": "string", "nrrExpansionPotential": "string", "confidence": "high|medium|low" },
+  "paybackPeriod": { "months": 0, "verdict": "string" },
+  "grossMarginHealth": { "marginPercentage": 0, "aiCogsEstimate": "string", "reasoning": "string" },
   "ltvCacVerdict": { "ratio": "string", "verdict": "string" },
   "breakEven": { "timeline": "string", "assumptions": ["string"] },
-  "burnRateScenarios": [ { "scenario": "string", "monthlyBurn": "string", "runway": "string" } ],
+  "runwaySensitivityMatrix": [ { "toggle": "string", "impactOnRunway": "string" } ],
   "optimalPricePoint": { "price": "string", "reasoning": "string" },
   "notFound": ["string"]
 }
@@ -400,8 +398,8 @@ OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers)
 NICHE: ${niche}
 USER BUDGET: ${userContext.budget}
 USER TIME: ${userContext.time}
-REVENUE MODEL: ${userContext.revenueModel || 'Not specified — infer from niche'}
-BUYER TYPE: ${userContext.buyerType || 'Not specified — infer from niche'}
+REVENUE MODEL: ${userContext.revenueModel || 'Not specified'}
+BUYER TYPE: ${userContext.buyerType || 'Not specified'}
 GOAL TIMELINE: ${userContext.goalTimeline || 'Not specified'}
 
 ${batch1Context}
@@ -409,14 +407,27 @@ ${batch1Context}
 === UNIT ECONOMICS RESEARCH DATA ===
 ${researchBlock(research.unitEconomics)}
 
-=== COMPETITOR & MARKET DATA (supplemental) ===
+=== COMPETITOR & MARKET DATA ===
 ${researchBlock([...research.marketSize, ...research.competitors])}
 
-IMPORTANT: Your unit economics MUST be consistent with the upstream market data above.
-If upstream says the market is saturated or declining, your CAC estimates should reflect higher acquisition costs.
-If the user specified a revenue model, calculate economics for THAT model specifically.
-If the user specified a buyer type (e.g., Enterprise vs Consumer), adjust CAC/LTV accordingly — Enterprise CAC is 10-100x consumer.
-If the user specified a goal timeline, the break-even analysis MUST factor it — a "Revenue in 30 days" user needs a fundamentally different burn rate scenario than a "Revenue in 12 months" user.
+Based on the research, produce Layer 5 Unit Economics.
+
+CAC PAYBACK PERIOD:
+- Calculate how many months it takes to recover the cost of acquisition.
+- If Payback > 12 months and USER BUDGET < 3 months of burn, YOU MUST flag this as a critical cash-flow risk.
+
+AI MARGIN & COGS:
+- Explicitly estimate the Cost of Goods Sold (COGS) for AI: API tokens (OpenAI/Anthropic), GPU hosting, and database overhead.
+- Calculate Gross Margin %. If < 70%, identify why (e.g., "Heavy video processing costs").
+
+CHANNEL-SPECIFIC ECONOMICS:
+- Map CAC benchmarks to the top channels identified in Batch 1 (e.g., SEO vs. Paid Ads).
+
+RUNWAY SENSITIVITY:
+- Provide 3 scenarios for what happens if CAC increases by 20% or Price decreases by 10%.
+
+NRR & EXPANSION:
+- Instead of static LTV, account for account expansion potential (Net Revenue Retention).
 
 HIDDEN COST COMPLETENESS:
 - Break-even calculations MUST include ALL cost categories discovered across the report:
