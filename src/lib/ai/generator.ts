@@ -336,6 +336,7 @@ function buildBatch2Summary(layers: FullReport['layers']): string {
   const parts: string[] = ['=== DOWNSTREAM INTELLIGENCE (from Layers 4-7) ==='];
 
   if (layers.layer4) {
+    parts.push(`[COMPETITORS] Vectors of Attack: ${layers.layer4.differentiationVectors?.map(v => v.vector).join('; ') || 'None'}`);
     parts.push(`[COMPETITORS] Top gaps: ${layers.layer4.marketGaps?.slice(0, 2).map(g => g.claim).join('; ') || 'None'}`);
     parts.push(`[COMPETITORS] Price sweet spot: ${layers.layer4.pricingSpectrum?.yourSweetSpot || 'Unknown'}`);
     parts.push(`[COMPETITORS] Count: ${layers.layer4.competitors?.length || 0} identified`);
@@ -390,6 +391,7 @@ function buildLayerSummary(layers: FullReport['layers']): string {
 
   if (layers.layer4) {
     parts.push(`[L4 COMPETITORS] Found: ${layers.layer4.competitors?.length || 0} competitors`);
+    parts.push(`[L4 COMPETITORS] Vectors: ${layers.layer4.differentiationVectors?.map(v => v.vector).join(', ') || 'None'}`);
     parts.push(`[L4 COMPETITORS] Sweet spot: ${layers.layer4.pricingSpectrum?.yourSweetSpot || '?'}`);
     parts.push(`[L4 COMPETITORS] Gaps: ${layers.layer4.marketGaps?.slice(0, 2).map(g => g.claim).join('; ') || 'None'}`);
   }

@@ -303,27 +303,22 @@ REGULATORY COST REALITY CHECK (REMINDER):
 
 export function layer4Prompt(niche: string, research: { competitors: string[] }, userUrls: string[] = [], batch1Context: string = '') {
   const system = `
-You are the Competitor Intelligence module. Produce deep profiles of the top competitors,
-identify market gaps, SEO white space, pricing spectrum, substitute threats, and competitor velocity.
-
-The user has explicitly provided some URLs they believe are competitors. YOU MUST:
-1. Verify if these are actually direct competitors, indirect substitutes, or entirely irrelevant (e.g. software vs agencies).
-2. Start your response with a concise "userCompetitorVerdict" evaluating their assumed competitors against the real market reality you found.
-3. Then proceed with the true top competitors in your "competitors" array.
+You are the Competitor Intelligence module.
+Your job is to map the battlefield, audit incumbent moats, identify attack vectors, and track failed precursors.
 
 ${DATA_INTEGRITY_RULES}
 
-CRITICAL: If a competitor's revenue, traffic, or market share is NOT in the research data, say "Not publicly available". Estimating competitor financials without data is a critical integrity violation.
-
 OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers).
 {
-  "userCompetitorVerdict": "string",
-  "competitors": [ { "name": "string", "url": "string", "estimatedRevenue": "string", "traffic": "string", "pricing": "string", "strengths": ["string"], "weaknesses": ["string"] } ],
+  "userCompetitorVerdict": [ { "url": "string", "threatLevel": "high|medium|low", "verdict": "string" } ],
+  "competitors": [ { "name": "string", "url": "string", "revenue": "string", "traffic": "string", "primaryMarketingPillar": "string", "pricing": "string", "pricingAnchors": ["string"], "moatAudit": ["string"], "strengths": ["string"], "weaknesses": ["string"] } ],
+  "differentiationVectors": [ { "vector": "string", "howToWin": "string", "priority": "primary|secondary" } ],
+  "failedCompetitors": [ { "name": "string", "shutdownDate": "string", "funding": "string", "reason": "string", "lesson": "string" } ],
   "marketGaps": [ { "claim": "string", "source": "string", "confidence": "high|medium|low" } ],
   "seoWhiteSpace": [ { "keyword": "string", "difficulty": "string", "opportunity": "string" } ],
   "pricingSpectrum": { "low": "string", "mid": "string", "high": "string", "yourSweetSpot": "string" },
-  "substituteThreats": [ { "substitute": "string", "risk": "string" } ],
-  "competitorVelocity": [ { "competitor": "string", "momentum": "string", "direction": "string" } ],
+  "substituteThreats": [ { "substitute": "string", "linkedJob": "string", "risk": "string" } ],
+  "competitorVelocity": [ { "competitor": "string", "momentum": "surging|stable|losing_ground", "direction": "string" } ],
   "notFound": ["string"]
 }
 `.trim();
@@ -337,39 +332,34 @@ ${batch1Context}
 === RESEARCH DATA ===
 ${researchBlock(research.competitors)}
 
-IMPORTANT:
-- Market gaps should map to the AUDIENCE pain points from upstream data.
-- The pricingSpectrum.yourSweetSpot should be consistent with any audience payment thresholds from upstream.
-- Competitor velocity should acknowledge upstream saturation scores.
+Based on the research, produce Layer 4 Competitor Intelligence.
+
+COMPETITOR MOAT AUDIT:
+- Identify the specific defensive moat for each top competitor: 
+  * Network Effects (Value grows with users)
+  * Data Advantage (Proprietary dataset)
+  * Switching Costs (Embedded workflow/lock-in)
+  * Brand/Regulatory lock-in.
+
+DIFFERENTIATION VECTORS:
+- Identify the 3 "Vectors of Attack" where the user can win.
+- Example: "Incumbents are Enterprise-focused (Bloated); Vector: UI/UX Simplicity (Speed)."
+
+SUBSTITUTE JOB-MAPPING:
+- Link the identified substitutes (Manual Excel, VAs, status quo) directly to the AUDIENCE JOB (found in Batch 1 context).
+- Explain why the current substitute is winning or losing against SaaS solutions.
+
+MARKETING PILLAR TEARDOWN:
+- Identify each competitor's "Primary Marketing Pillar" (e.g., SEO-heavy, Paid-Ads, Community-led, Cold Outbound).
+
+PRICING ANCHORS:
+- Identify the specific features that act as "gates" for the jump from mid-tier to high-tier pricing (e.g., "SSO/SAML" or "API usage limits").
 
 DEFUNCT COMPETITOR RULES:
 - If ANY competitor entry is prefixed with [⚠️ DEFUNCT], you MUST:
-  (a) EXCLUDE it from the main "competitors" array (it is not an active competitor).
-  (b) INCLUDE it in the "failedCompetitors" array with: name, shutdownDate (if known), fundingRaised, reasonForFailure, and lessonForUser.
-  (c) In your userCompetitorVerdict, explicitly state that this competitor has shut down and what that means for the user's thesis.
-  (d) Do NOT treat a defunct competitor's market absence as a "gap" — it may be a graveyard.
-
-PLATFORM PARTNERSHIP = DIRECT COMPETITOR (CRITICAL):
-- If a company has an EXISTING official partnership with the user's target platform, community, or ecosystem (e.g., CrossFit, a specific gym chain, a sports league, a professional body), that company is a DIRECT COMPETITOR — NOT a distribution opportunity.
-- A platform that has already chosen a metabolic health / nutrition / wellness partner has CLOSED the distribution channel to newcomers.
-- List any platform-partnered companies in the main "competitors" array with a strength: "Has official [Platform] partnership — controls primary distribution channel."
-- Do NOT list platform-partnered competitors in "distributionLeverage" or "marketGaps" as opportunities. They are the OPPOSITE of opportunities.
-
-GEOGRAPHY-SPECIFIC COMPETITOR AVAILABILITY:
-- For EACH competitor, explicitly check: is this competitor available in the user's target geography?
-- If a competitor is already operating in the same country/region as the user, the "market gap" claim for that geography is INVALID.
-- State: "[Competitor] is already available in [geography] at [price]" if this information exists in the research data.
-
-PLATFORM PARTNER DETECTION:
-- If ANY competitor data contains [🏷️ PLATFORM PARTNER] tags, that company has an OFFICIAL partnership in this space.
-- These are NOT distribution opportunities — they are CLOSED distribution channels.
-- List platform-partnered companies in the "competitors" array with strength: "Official platform partner — controls primary distribution channel for [platform]."
-- In your userCompetitorVerdict, explicitly state: "[Company] has an official partnership with [Platform], which closes this distribution channel to new entrants."
-
-FINANCIAL DATA HONESTY:
-- For competitor revenue/traffic, ONLY use numbers that appear verbatim in the [SOURCE:] data.
-- If a source says "raised $13.5M", that is FUNDING, not revenue. Do NOT confuse funding rounds with revenue.
-- If revenue is not in the data, say "Revenue: Not publicly available" — do NOT estimate.
+  * Extract the reason for failure and lesson for the user.
+  * EXCLUDE it from the main "competitors" array.
+  * INCLUDE it in "failedCompetitors".
 `.trim();
 
   return { system, user };

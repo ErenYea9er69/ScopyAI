@@ -181,29 +181,41 @@ export type Layer3 = z.infer<typeof layer3Schema>;
 export const failedCompetitorSchema = z.object({
   name: z.string(),
   shutdownDate: z.string(),
-  fundingRaised: z.string(),
-  reasonForFailure: z.string(),
-  lessonForUser: z.string(),
+  funding: z.string(),
+  reason: z.string(),
+  lesson: z.string(),
 });
 export type FailedCompetitor = z.infer<typeof failedCompetitorSchema>;
 
 export const layer4Schema = z.object({
-  userCompetitorVerdict: z.string().optional(),
+  userCompetitorVerdict: z.array(z.object({
+    url: z.string(),
+    threatLevel: z.enum(['high', 'medium', 'low']),
+    verdict: z.string(),
+  })).optional(),
   competitors: z.array(z.object({
     name: z.string(),
     url: z.string().optional(),
-    estimatedRevenue: z.string(),
+    revenue: z.string(),
     traffic: z.string(),
+    primaryMarketingPillar: z.string(),
     pricing: z.string(),
+    pricingAnchors: z.array(z.string()),
+    moatAudit: z.array(z.string()),
     strengths: z.array(z.string()),
     weaknesses: z.array(z.string()),
+  })),
+  differentiationVectors: z.array(z.object({
+    vector: z.string(),
+    howToWin: z.string(),
+    priority: z.enum(['primary', 'secondary']),
   })),
   failedCompetitors: z.array(failedCompetitorSchema).optional().default([]),
   marketGaps: z.array(citedClaim),
   seoWhiteSpace: z.array(z.object({ keyword: z.string(), difficulty: z.string(), opportunity: z.string() })),
   pricingSpectrum: z.object({ low: z.string(), mid: z.string(), high: z.string(), yourSweetSpot: z.string() }),
-  substituteThreats: z.array(z.object({ substitute: z.string(), risk: z.string() })),
-  competitorVelocity: z.array(z.object({ competitor: z.string(), momentum: z.string(), direction: z.string() })),
+  substituteThreats: z.array(z.object({ substitute: z.string(), linkedJob: z.string(), risk: z.string() })),
+  competitorVelocity: z.array(z.object({ competitor: z.string(), momentum: z.enum(['surging', 'stable', 'losing_ground']), direction: z.string() })),
   notFound: z.array(z.string()).min(1).default(["No additional limitations identified"]),
 });
 export type Layer4 = z.infer<typeof layer4Schema>;
