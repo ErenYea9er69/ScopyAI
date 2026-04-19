@@ -366,7 +366,12 @@ export const debateResultSchema = z.object({
   cynic: agentVerdictSchema,
   operator: agentVerdictSchema,
   finalVerdict: z.string(),
-  compositeScore: z.number().min(0).max(100),
+  compositeScore: z.number(),
+  clashPoints: z.array(z.string()),
+  milestones: z.array(z.object({
+    condition: z.string(),
+    action: z.string(),
+  })),
   contradictoryCertainty: z.boolean().optional().default(false),
 });
 export type DebateResult = z.infer<typeof debateResultSchema>;

@@ -671,7 +671,7 @@ function extractFatalFlags(report: FullReport): void {
 function generateVerdict(report: FullReport): void {
   if (!report.debate) return;
 
-  const { operator, cynic, builder, compositeScore } = report.debate;
+  const { operator, cynic, compositeScore, milestones } = report.debate;
   const cynicSignal = cynic.signal?.toUpperCase() || '';
   const operatorSignal = operator.signal?.toUpperCase() || '';
   const fatalCount = report.fatalFlags?.length || 0;
@@ -680,42 +680,41 @@ function generateVerdict(report: FullReport): void {
   let reason: string;
   let recommendedAction: string;
 
-  if (operator.score >= 85 || operatorSignal.includes('IMPOSSIBLE')) {
+  // 1. FATAL FAILURES (Operator IMPOSSIBLE or Cynic KILL)
+  if (operator.score >= 85 || operatorSignal.includes('IMPOSSIBLE') || cynicSignal.includes('KILL') || compositeScore < 30) {
     label = 'DO_NOT_PROCEED';
-    reason = `Execution rated IMPOSSIBLE (${operator.score}/100). The idea cannot be built with the stated budget, skills, and timeline.`;
-    recommendedAction = 'Pivot to a simpler version that removes hardware dependencies, regulatory requirements, and API access barriers. Validate demand with zero-tech manual service first.';
-  } else if (compositeScore < 30 || cynicSignal.includes('KILL')) {
-    label = 'DO_NOT_PROCEED';
-    reason = `Composite score ${compositeScore}/100 — the adversarial analysis found fundamental viability problems. ${cynic.keyPoints?.[0] || ''}`;
-    recommendedAction = 'Review the Cynic analysis and pivot options. The current formulation has structural flaws that cannot be fixed with iteration.';
-  } else if (compositeScore <= 50 || operator.score >= 65 || fatalCount >= 3) {
+    reason = operator.score >= 85 
+      ? `EXECUTION BARRIER: Rated IMPOSSIBLE (${operator.score}/100). The current burn-rate/timeline is incompatible with your budget.` 
+      : `STRATEGIC FAILURE: The adversarial audit found fundamental viability gaps. ${cynic.reasoning.substring(0, 150)}...`;
+    
+    recommendedAction = milestones.find(m => m.condition.includes('KILL'))?.action 
+      || 'Review the Cynic analysis and pivot immediately. Do not invest capital into this current formulation.';
+  } 
+  // 2. CAUTIONARY / DIRECTIONAL
+  else if (compositeScore <= 60 || operator.score >= 65 || fatalCount >= 2) {
     label = 'PROCEED_WITH_CAUTION';
-    reason = `Composite score ${compositeScore}/100 with ${fatalCount} fatal flag(s). Significant risks identified but the idea may be viable with modifications.`;
-    recommendedAction = 'Resolve the top blockers listed below before investing time or money. Complete primary customer research (20+ conversations) first.';
-  } else {
+    reason = `DIRECTIONAL ONLY: Composite score ${compositeScore}/100. Significant execution risks or data gaps identified.`;
+    recommendedAction = milestones.find(m => m.condition.includes('PIVOT'))?.action 
+      || 'Resolve the top blockers below before increasing spend. Validate the GTM "First 10" manually first.';
+  } 
+  // 3. STRONG GO
+  else {
     label = 'GO';
-    reason = `Composite score ${compositeScore}/100. Market opportunity identified with manageable execution risks.`;
-    recommendedAction = 'Begin with the validation roadmap in Layer 6. Target first 5 paying customers within 30 days using the recommended GTM channels.';
+    reason = `HIGH CONVICTION: Composite score ${compositeScore}/100. Validated demand signals and manageable execution risk.`;
+    recommendedAction = milestones.find(m => m.condition.includes('GO'))?.action 
+      || 'Begin execution of the Phase 1 Validation Roadmap in Layer 6 immediately.';
   }
 
-  // Top blockers from fatal flags
-  const topBlockers = (report.fatalFlags || []).slice(0, 3).map(f => {
-    // Truncate long flags for the verdict block
-    return f.length > 200 ? f.substring(0, 200) + '...' : f;
-  });
-
-  // Add operator key points if not enough blockers
+  // Top blockers from fatal flags + operator concerns
+  const topBlockers = (report.fatalFlags || []).slice(0, 3).map(f => f.length > 200 ? f.substring(0, 200) + '...' : f);
   if (topBlockers.length < 3 && operator.keyPoints) {
     for (const kp of operator.keyPoints) {
       if (topBlockers.length >= 3) break;
-      if (!topBlockers.some(b => b.includes(kp.substring(0, 30)))) {
-        topBlockers.push(kp);
-      }
+      if (!topBlockers.some(b => b.includes(kp.substring(0, 30)))) topBlockers.push(kp);
     }
   }
 
   report.verdict = { label, reason, topBlockers, recommendedAction };
-  console.log(`[Verdict] ${label}: ${reason}`);
 }
 
 /**
