@@ -293,6 +293,8 @@ function buildBatch1Summary(layers: FullReport['layers']): string {
   if (layers.layer1) {
     const l1 = layers.layer1;
     parts.push(`[AUDIENCE] Top pain points: ${l1.painPoints?.slice(0, 3).map(p => p.pain).join('; ') || 'Unknown'}`);
+    parts.push(`[AUDIENCE] Jobs-to-be-Done: ${l1.jobsToBeDone?.functional || 'Unknown'}`);
+    parts.push(`[AUDIENCE] Market Awareness: ${l1.marketAwareness || 'Unknown'}`);
     parts.push(`[AUDIENCE] Payment threshold: ${l1.paymentThreshold?.low || '?'} – ${l1.paymentThreshold?.high || '?'}`);
     parts.push(`[AUDIENCE] Shadow avatar: ${l1.shadowAvatar?.description || 'Not identified'}`);
   } else {

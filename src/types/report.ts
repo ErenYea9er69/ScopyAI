@@ -32,15 +32,31 @@ export const layer1Schema = z.object({
     context: z.string(),
   })),
   purchaseTriggers: z.array(citedClaim),
+  jobsToBeDone: z.object({
+    functional: z.string(),
+    social: z.string(),
+    emotional: z.string(),
+  }),
+  marketAwareness: z.enum(['unaware', 'problem_aware', 'solution_aware', 'product_aware', 'most_aware']),
   avatar: z.object({
-    age: z.string(),
-    income: z.string(),
+    expertiseLevel: z.string(),
+    mentalModel: z.string(),
     platforms: z.array(z.string()),
     identity: z.string(),
     selfNarrative: z.string(),
     trustedInfluencers: z.array(z.string()),
     contentConsumed: z.array(z.string()),
   }),
+  nicheHangouts: z.array(z.object({
+    name: z.string(),
+    type: z.string(),
+    activityLevel: z.string(),
+  })),
+  dmu: z.array(z.object({
+    role: z.string(),
+    priority: z.string(),
+    keyConcern: z.string(),
+  })).optional(),
   hiddenObjections: z.array(citedClaim),
   desiresAndDreams: z.array(citedClaim),
   shadowAvatar: z.object({

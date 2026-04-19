@@ -84,7 +84,11 @@ OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers)
   "painPoints": [ { "pain": "string", "frequency": "string", "emotionalIntensity": "string", "wtpSignal": "string", "source": "string", "confidence": "high|medium|low" } ],
   "buyerLanguage": [ { "quote": "string", "source": "string", "context": "string" } ],
   "purchaseTriggers": [ { "claim": "string", "source": "string", "confidence": "high|medium|low" } ],
-  "avatar": { "age": "string", "income": "string", "platforms": ["string"], "identity": "string", "selfNarrative": "string", "trustedInfluencers": ["string"], "contentConsumed": ["string"] },
+  "jobsToBeDone": { "functional": "string", "social": "string", "emotional": "string" },
+  "marketAwareness": "unaware|problem_aware|solution_aware|product_aware|most_aware",
+  "avatar": { "expertiseLevel": "string", "mentalModel": "string", "platforms": ["string"], "identity": "string", "selfNarrative": "string", "trustedInfluencers": ["string"], "contentConsumed": ["string"] },
+  "nicheHangouts": [ { "name": "string", "type": "string", "activityLevel": "string" } ],
+  "dmu": [ { "role": "string", "priority": "string", "keyConcern": "string" } ],
   "hiddenObjections": [ { "claim": "string", "source": "string", "confidence": "high|medium|low" } ],
   "desiresAndDreams": [ { "claim": "string", "source": "string", "confidence": "high|medium|low" } ],
   "shadowAvatar": { "description": "string", "whyTheyWontBuy": "string", "howToExclude": "string" },
@@ -104,10 +108,25 @@ ${qualitySummary ? qualityHeader(qualitySummary) : ''}
 ${researchBlock([...research.painPoints, ...research.competitors])}
 
 Based on the above research, produce a comprehensive Layer 1 Audience Intelligence report.
-Include exact verbatim quotes from forums/reviews where available.
-IMPORTANT: If a buyer type is specified (e.g., Enterprise vs Consumer), build the avatar for THAT buyer type.
-For the shadow avatar, profile the lookalike customer who will NEVER buy.
-For payment threshold, estimate low/mid/high price anchors with reasoning.
+
+JOBS-TO-BE-DONE (JTBD):
+- Identify the primary Functional, Social, and Emotional "Jobs" the audience is trying to complete. 
+- A job is NOT a feature; it is the goal the customer wants to achieve (e.g., "Help me feel confident in my investment choices" vs "investment ticker").
+
+MARKET AWARENESS:
+- Map the audience to one of the 5 Awareness Stages:
+  1. Unaware: Doesn't know they have a problem.
+  2. Problem Aware: Knows the problem, but not solutions.
+  3. Solution Aware: Knows solutions exist, but not yours.
+  4. Product Aware: Knows your product, but isn't sure it's right.
+  5. Most Aware: Ready to buy.
+
+AVATAR & DMU:
+- Focus avatar on "Expertise Level" (Novice vs Pro) and "Mental Model" (e.g., "Skeptical Optimizer") rather than age.
+- IMPORTANT: If BUYER TYPE is "Enterprise" or B2B, YOU MUST generate a Decision Making Unit (DMU) in the 'dmu' field with 3 roles: Economic Buyer, Champion, and End User.
+
+NICHE HANGOUTS:
+- Scan research sources for SPECIFIC subreddits, Discord servers, Slack communities, or professional forums mentioned. Do not just say "Reddit"; identify "/r/biohacking" if it appears.
 
 SOURCE AGE VERIFICATION (CRITICAL):
 - Check the [AGE: YYYY] tag on every source you cite.
@@ -116,12 +135,9 @@ SOURCE AGE VERIFICATION (CRITICAL):
   (a) Flag it: "⚠️ Source is from [YEAR] — pre-dating current AI tools (ChatGPT, AI coaching) that may have eliminated this pain point."
   (b) Set confidence to "low" for that pain point.
   (c) Add to notFound: "Primary pain point evidence is [N] years old. Current willingness-to-pay may have changed significantly since free AI alternatives became available."
-- If ALL your pain point sources are older than 3 years, add: "CRITICAL: No current (<3 year) pain point evidence found. Unable to confirm these pain points still exist at intensity sufficient to drive paid subscriptions."
 
 DEFUNCT COMPANY MARKETING COPY:
 - If ANY source is tagged [⚠️ SOURCE FROM DEFUNCT COMPANY], you MUST NOT use their marketing copy, testimonials, or buyer language as evidence of current customer desire.
-- A dead company's website copy is not live market evidence. Their customers have either found alternatives or stopped wanting the product.
-- If the only buyer language quotes come from defunct companies, state this explicitly and set confidence to "low".
 `.trim();
 
   return { system, user };
