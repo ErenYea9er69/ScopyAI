@@ -108,6 +108,11 @@ async function runDuel(duelId: string, niches: string[], geography: string) {
     complaintPlatforms: [] as string[],
     founderFit: [] as string[],
     goalTimeline: '',
+    uniqueInsight: '',
+    acquisitionChannel: '',
+    buyerType: '',
+    revenueModel: '',
+    whyNow: '',
   }));
 
   const researchResults = await Promise.allSettled(
