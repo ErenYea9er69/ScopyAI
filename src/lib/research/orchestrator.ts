@@ -1,7 +1,18 @@
 import * as tavily from './tavily';
 import * as serper from './serper';
+import { generateStructuredOutput, MODELS } from '../ai/client';
+import { 
+  queryExpansionPrompt, 
+  queryPlanSchema, 
+  sourceRelevancePrompt, 
+  relevanceSchema, 
+  competitorDetectivePrompt, 
+  competitorStatusSchema,
+  gapAnalysisPrompt,
+  gapAnalysisSchema
+} from '../ai/prompts/research';
 
-type IntakeData = {
+export type IntakeData = {
   niche: string;
   geography: string;
   stage: string;
@@ -10,7 +21,13 @@ type IntakeData = {
   assets: string[];
   competitorUrls: string[];
   complaintPlatforms: string[];
+  founderFit: string[];
   goalTimeline: string;
+  uniqueInsight: string;
+  acquisitionChannel: string;
+  buyerType: string;
+  revenueModel: string;
+  whyNow: string;
 };
 
 export type ResearchData = {
@@ -206,6 +223,31 @@ function scoreSource(
 }
 
 /**
+ * v5: Uses LongCat to semantically evaluate if a source snippet is relevant
+ * to the specific business niche and unique insight.
+ */
+async function evaluateSourceRelevance(
+  snippet: string,
+  niche: string,
+  insight: string
+): Promise<{ relevanceScore: number; reasoning: string; shouldKeep: boolean }> {
+  const goal = `Researching the viability of ${niche}. Specific focus: ${insight}`;
+  const p = sourceRelevancePrompt(snippet, goal);
+  
+  try {
+    return await generateStructuredOutput(
+      p.system,
+      p.user,
+      relevanceSchema,
+      MODELS.ROUTER
+    );
+  } catch (err) {
+    console.error('[Orchestrator] Relevance check failed, assuming relevant as fallback:', err);
+    return { relevanceScore: 5, reasoning: 'Fallback due to error', shouldKeep: true };
+  }
+}
+
+/**
  * Extracts likely competitor names from competitor research data strings.
  * v3: Uses multiple extraction strategies:
  *   1. Brand names from URLs (e.g., supersapiens.com → "Supersapiens")
@@ -284,10 +326,37 @@ function extractCompetitorNames(competitorData: string[], userCompetitorUrls: st
  * Orchestrates all parallel research gathering tasks
  */
 export async function gatherIntelligence(intake: IntakeData): Promise<ResearchData> {
-  // Start parallel requests
-  console.log(`[Orchestrator] Firing parallel intel queries for ${intake.niche}...`);
+  // v5: Step 1 — Semantic Query Expansion via LongCat
+  console.log(`[Orchestrator] Planning research trajectories for "${intake.niche}"...`);
+  const planPrompt = queryExpansionPrompt(
+    intake.niche,
+    intake.geography,
+    intake.uniqueInsight,
+    intake.whyNow
+  );
+  
+  let researchPlan;
+  try {
+    researchPlan = await generateStructuredOutput(
+      planPrompt.system,
+      planPrompt.user,
+      queryPlanSchema,
+      MODELS.ROUTER
+    );
+  } catch (err) {
+    console.error('[Orchestrator] Query expansion failed, falling back to legacy queries:', err);
+    // Fallback to basic queries if expansion fails
+    researchPlan = {
+      marketSizeQueries: [`${intake.niche} market size ${intake.geography}`],
+      competitorQueries: [`${intake.niche} competitors alternatives ${intake.geography}`],
+      painPointQueries: [`${intake.niche} problems complaints frustration`],
+      trendQueries: [`${intake.niche} trends 2024 2025`],
+      regulationQueries: [`${intake.niche} regulations legal ${intake.geography}`],
+      unitEconomicsQueries: [`${intake.niche} CAC LTV unit economics`],
+    };
+  }
 
-  // Extract niche keywords for relevance checking
+  // Extract niche keywords for relevance checking (legacy fallback)
   const nicheKeywords = intake.niche
     .toLowerCase()
     .split(/[\s,;]+/)
@@ -311,57 +380,83 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
     .map(p => platformToDomain[p] || p)
     .filter(d => d.includes('.'));  // Only keep valid-looking domains
 
-  // v4: Added platform partner search to catch competitors with official platform endorsements
-  const [marketRes, compRes, painRes, trendRes, regRes, econRes, declineRes, partnerRes, googleFallback] = await Promise.all([
-    tavily.searchMarket(intake.niche, intake.geography),
-    tavily.searchCompetitors(intake.niche, intake.geography),
-    tavily.searchPainPoints(intake.niche, complaintDomains, intake.geography),
-    tavily.searchTrends(intake.niche),
-    tavily.searchRegulations(intake.niche, intake.geography),
-    tavily.searchUnitEconomics(intake.niche, intake.geography),
+  // v5: Step 2 — Parallel search using Expanded Queries
+  console.log(`[Orchestrator] Batching ${Object.values(researchPlan).flat().length} search queries across 6 intel domains...`);
+  const [marketResBatch, compResBatch, painResBatch, trendResBatch, regResBatch, econResBatch, declineRes, partnerRes, googleFallback] = await Promise.all([
+    Promise.all(researchPlan.marketSizeQueries.map(q => typeof q === 'string' ? tavily.searchGeneric(q, { includeAnswer: true, searchDepth: 'advanced' }) : Promise.resolve({results: []}))),
+    Promise.all(researchPlan.competitorQueries.map(q => typeof q === 'string' ? tavily.searchGeneric(q, { maxResults: 7 }) : Promise.resolve({results: []}))),
+    Promise.all(researchPlan.painPointQueries.map(q => typeof q === 'string' ? tavily.searchGeneric(q, { includeDomains: complaintDomains, maxResults: 7, searchDepth: 'advanced' }) : Promise.resolve({results: []}))),
+    Promise.all(researchPlan.trendQueries.map(q => typeof q === 'string' ? tavily.searchGeneric(q, { includeAnswer: true, maxResults: 5, timeRange: 'year' }) : Promise.resolve({results: []}))),
+    Promise.all(researchPlan.regulationQueries.map(q => typeof q === 'string' ? tavily.searchGeneric(q, { includeAnswer: true, maxResults: 3 }) : Promise.resolve({results: []}))),
+    Promise.all(researchPlan.unitEconomicsQueries.map(q => typeof q === 'string' ? tavily.searchGeneric(q, { includeAnswer: true, maxResults: 5, searchDepth: 'advanced' }) : Promise.resolve({results: []}))),
     tavily.searchMarketDecline(intake.niche, intake.geography),
-    tavily.searchPlatformPartners(intake.niche, intake.geography),  // v4: Find official platform partners
+    tavily.searchPlatformPartners(intake.niche, intake.geography),
     serper.googleSearch(`${intake.niche} software solutions ${intake.geography}`) // Fallback/Supplemental
   ]);
 
-  // === CONDITIONAL RE-SEARCH: If first pass returned sparse data, try harder ===
+  // Helper to merge batch results
+  const mergeResults = (batch: any[]) => ({
+    results: batch.flatMap(r => r.results || []),
+    answer: batch.find(r => r.answer)?.answer || '',
+  });
+
+  const marketRes = mergeResults(marketResBatch as any[]);
+  const compRes = mergeResults(compResBatch);
+  const painRes = mergeResults(painResBatch);
+  const trendRes = mergeResults(trendResBatch);
+  const regRes = mergeResults(regResBatch);
+  const econRes = mergeResults(econResBatch);
+
+  // Helper: format a Tavily result with URL attribution and freshness tag
+  const fmt = (r: any): string => {
+    const url = r?.url || 'unknown';
+    const title = r?.title || '';
+    const content = r?.content || r?.rawContent || '';
+    const year = extractYear(`${url} ${title}`);
+    const ageTag = year ? ` [AGE: ${year}]` : '';
+    return `[SOURCE: ${url} | ${title}]${ageTag} ${content}`;
+  };
+
+  // v5: Step 2b — Adversarial Re-Search (Auto)
+  // Analyzes initial snippets for "gaps" and fires a second wave if depth is low.
   let marketRes2: any = null;
   let compRes2: any = null;
   let painRes2: any = null;
 
-  const marketEmpty = !marketRes?.results?.length;
-  const compEmpty = !compRes?.results?.length;
-  const painEmpty = !painRes?.results?.length;
+  const combinedBatchContext = [
+    ...marketRes.results.map(fmt),
+    ...compRes.results.map(fmt),
+    ...painRes.results.map(fmt)
+  ].join('\n').slice(0, 8000);
 
-  if (marketEmpty || compEmpty || painEmpty) {
-    console.log(`[Orchestrator] Sparse data detected (market=${!marketEmpty}, comp=${!compEmpty}, pain=${!painEmpty}). Firing re-search...`);
+  console.log(`[Orchestrator] Auditing research depth for gaps...`);
+  const gapPrompt = gapAnalysisPrompt(intake.niche, combinedBatchContext);
+  let gapResult;
+  try {
+    gapResult = await generateStructuredOutput(
+      gapPrompt.system,
+      gapPrompt.user,
+      gapAnalysisSchema,
+      MODELS.ROUTER
+    );
+  } catch (err) {
+    console.error('[Orchestrator] Gap analysis failed:', err);
+    gapResult = { depthScore: 8, newQueries: [] }; // Assume deep enough to avoid infinite loop
+  }
 
-    const reSearchPromises: Promise<any>[] = [];
-
-    if (marketEmpty) {
-      // Try alternative query formulations
-      reSearchPromises.push(
-        tavily.searchMarket(`${intake.niche} industry report revenue`, intake.geography)
-          .then(r => { marketRes2 = r; })
-      );
-    }
-    if (compEmpty) {
-      // Try without geography (broader search)
-      reSearchPromises.push(
-        tavily.searchCompetitors(intake.niche)
-          .then(r => { compRes2 = r; })
-      );
-    }
-    if (painEmpty) {
-      // Try broader complaint platforms
-      reSearchPromises.push(
-        tavily.searchPainPoints(intake.niche, ['reddit.com', 'producthunt.com', 'news.ycombinator.com', 'capterra.com'])
-          .then(r => { painRes2 = r; })
-      );
-    }
-
-    await Promise.all(reSearchPromises);
-    console.log(`[Orchestrator] Re-search complete. Market=${!!marketRes2}, Comp=${!!compRes2}, Pain=${!!painRes2}`);
+  if (gapResult.depthScore < 7 && gapResult.newQueries.length > 0) {
+    console.log(`[Orchestrator] Research depth is ${gapResult.depthScore}/10. Firing ${gapResult.newQueries.length} adversarial queries: ${gapResult.newQueries.join(', ')}`);
+    
+    const reSearchPromises = gapResult.newQueries.map((q: string) => tavily.searchGeneric(q, { searchDepth: 'advanced', maxResults: 5 }));
+    const reSearchRes = await Promise.all(reSearchPromises);
+    
+    // Distribute re-searched data (basic heuristic distribution based on query keywords)
+    const allReResults = reSearchRes.flatMap((r: any) => r.results || []);
+    marketRes2 = { results: allReResults.filter((r: any) => (r.title + r.content).toLowerCase().match(/market|size|revenue|tam|trend/)) };
+    compRes2 = { results: allReResults.filter((r: any) => (r.title + r.content).toLowerCase().match(/competitor|alternative|vs|pricing/)) };
+    painRes2 = { results: allReResults.filter((r: any) => (r.title + r.content).toLowerCase().match(/problem|complaint|frustrated|reddit|quora/)) };
+    
+    console.log(`[Orchestrator] Adversarial re-search complete. Found ${allReResults.length} new signals.`);
   }
 
   const competitorExtractions = await Promise.all(
@@ -376,16 +471,6 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
       const content = r?.rawContent || r?.content || '';
       return `[SOURCE: ${url} | ${title}] ${content}`;
     }) || []);
-
-  // Helper: format a Tavily result with URL attribution and freshness tag
-  const fmt = (r: any): string => {
-    const url = r?.url || 'unknown';
-    const title = r?.title || '';
-    const content = r?.content || r?.rawContent || '';
-    const year = extractYear(`${url} ${title}`);
-    const ageTag = year ? ` [AGE: ${year}]` : '';
-    return `[SOURCE: ${url} | ${title}]${ageTag} ${content}`;
-  };
 
   // Aggregate Raw Strings with source URLs embedded (merge first pass + re-search)
   const marketSize = [
@@ -426,95 +511,61 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
     ...(econRes?.results?.map(fmt) || []),
   ].filter(Boolean) as string[];
 
-  // === DEAD COMPETITOR DETECTION v4 ===
-  // v4: Precision system with counter-signal verification to prevent false positives.
-  // Previous versions marked WHOOP ($10B) and Macrostax (200K users) as defunct
-  // because search results mentioned OTHER defunct companies in the same articles.
-  const extractedNames = extractCompetitorNames(competitors, intake.competitorUrls || []);
-  if (extractedNames.length > 0) {
-    console.log(`[Orchestrator] Checking ${extractedNames.length} competitor names for shutdown signals: ${extractedNames.join(', ')}`);
-    
-    const statusResults = await Promise.all(
-      extractedNames.map(async (name) => {
-        try {
-          const status = await tavily.searchCompetitorStatus(name);
-          const nameLower = name.toLowerCase();
-          
-          // v4: PRECISION CHECK — require the company name to appear NEAR shutdown keywords
-          // in the same sentence, not just anywhere in the same article
-          let shutdownScore = 0;
-          let vitalityScore = 0;
-          
-          for (const r of (status.results || [])) {
-            const title = (r.title || '').toLowerCase();
-            const content = (r.content || '').toLowerCase();
-            
-            // Split into sentences for precision matching
-            const sentences = `${title}. ${content}`.split(/[.!?]+/);
-            
-            for (const sentence of sentences) {
-              const mentionsName = sentence.includes(nameLower);
-              if (!mentionsName) continue; // Skip sentences that don't mention this company
-              
-              // Shutdown signals IN THE SAME SENTENCE as the company name
-              const shutdownKeywords = ['shut down', 'shutdown', 'ceased operations', 'defunct', 'went bankrupt', 'closed permanently', 'terminated', 'discontinued'];
-              const hasShutdown = shutdownKeywords.some(kw => sentence.includes(kw));
-              if (hasShutdown) shutdownScore += 2;
-              
-              // COUNTER-SIGNALS — evidence the company is ALIVE
-              const vitalityKeywords = ['raised', 'funding', 'valuation', 'active users', 'members', 'launched', 'partnership', 'pricing', 'plans start at', 'per month', 'per year', 'revenue', 'bookings', 'growth', 'series'];
-              const hasVitality = vitalityKeywords.some(kw => sentence.includes(kw));
-              if (hasVitality) vitalityScore += 1;
-            }
-          }
-          
-          // v4: Only mark as defunct if shutdown signals DOMINATE and no vitality signals exist
-          const isDefunct = shutdownScore >= 3 && vitalityScore === 0;
-          
-          console.log(`[Orchestrator] ${name}: shutdownScore=${shutdownScore}, vitalityScore=${vitalityScore}, verdict=${isDefunct ? 'DEFUNCT' : 'ALIVE'}`);
-          
-          return { name, isDefunct, shutdownScore, vitalityScore, results: status.results };
-        } catch {
-          return { name, isDefunct: false, shutdownScore: 0, vitalityScore: 0, results: [] };
-        }
-      })
+  // v5: Step 3 — Competitor Detective (LLM)
+  // Replaces the ~100 line regex "Precision System v4"
+  console.log(`[Orchestrator] Running Competitor Detective on gathered context...`);
+  
+  const compContext = [
+    ...extractedCompetitorsContext,
+    ...(compRes?.results?.map(fmt) || [])
+  ].join('\n\n').slice(0, 15000); // Token safety
+  
+  const detectivePrompt = competitorDetectivePrompt(compContext);
+  let detectiveResult;
+  try {
+    detectiveResult = await generateStructuredOutput(
+      detectivePrompt.system,
+      detectivePrompt.user,
+      competitorStatusSchema,
+      MODELS.ROUTER
     );
-    
-    // Tag defunct competitors across ALL data arrays (not just competitors)
-    for (const { name, isDefunct } of statusResults) {
-      if (isDefunct) {
-        console.warn(`[Orchestrator] ⚠️ CONFIRMED DEFUNCT: ${name} (passed precision + counter-signal checks)`);
-        const defunctTag = `[⚠️ DEFUNCT — this competitor has confirmed shutdown/ceased operations] `;
-        const nameLower = name.toLowerCase();
-        
-        // Tag in competitors array
-        for (let i = 0; i < competitors.length; i++) {
-          if (competitors[i].toLowerCase().includes(nameLower) && !competitors[i].startsWith('[⚠️ DEFUNCT')) {
-            competitors[i] = `${defunctTag}${competitors[i]}`;
-          }
+  } catch (err) {
+    console.error('[Orchestrator] Competitor detective failed, falling back to basic extraction:', err);
+    detectiveResult = { competitors: [] };
+  }
+
+  // Tag defunct competitors across ALL data arrays
+  for (const { name, status } of detectiveResult.competitors) {
+    if (status === 'defunct') {
+      const defunctTag = `[⚠️ DEFUNCT — this competitor has confirmed shutdown/ceased operations] `;
+      const nameLower = name.toLowerCase();
+      
+      // Tag in competitors
+      for (let i = 0; i < competitors.length; i++) {
+        if (competitors[i].toLowerCase().includes(nameLower) && !competitors[i].startsWith('[⚠️ DEFUNCT')) {
+          competitors[i] = `${defunctTag}${competitors[i]}`;
         }
-        
-        // v4: Also tag in painPoints — prevent using defunct company marketing copy as buyer evidence
-        for (let i = 0; i < painPoints.length; i++) {
-          if (painPoints[i].toLowerCase().includes(nameLower) && !painPoints[i].startsWith('[⚠️ DEFUNCT')) {
-            painPoints[i] = `[⚠️ SOURCE FROM DEFUNCT COMPANY — ${name} has shut down. Do NOT use their marketing copy as current buyer evidence] ${painPoints[i]}`;
-          }
-        }
-        
-        // v4: Also tag in marketSize
-        for (let i = 0; i < marketSize.length; i++) {
-          if (marketSize[i].toLowerCase().includes(nameLower) && !marketSize[i].startsWith('[⚠️ DEFUNCT')) {
-            marketSize[i] = `[⚠️ DATA FROM DEFUNCT COMPANY — ${name} has shut down. Their market data may be outdated] ${marketSize[i]}`;
-          }
+      }
+      // Tag in pain points
+      for (let i = 0; i < painPoints.length; i++) {
+        if (painPoints[i].toLowerCase().includes(nameLower) && !painPoints[i].startsWith('[⚠️ SOURCE')) {
+          painPoints[i] = `[⚠️ SOURCE FROM DEFUNCT COMPANY — ${name} has shut down] ${painPoints[i]}`;
         }
       }
     }
   }
 
-  // ========== SOURCE QUALITY SCORING v2 ==========
-  // Merge and quality-score all source URLs
-  
-  const rawSources = [
+  // v5: Step 4 — Source Quality Scoring & LLM Relevance Filter
+  const uniqueUrls = new Set<string>();
+  const finalizedSources: { url: string; title: string; confidence: 'high'|'medium'|'low' }[] = [];
+  const rejectedSources: { url: string; title: string; reason: string }[] = [];
+  let staleSourceCount = 0;
+  let irrelevantSourceCount = 0;
+  let oldestYear: number | null = null;
+  let freshCount = 0;
+
+  const currentYear = new Date().getFullYear();
+  const rawSourcesList = [
     ...(marketRes?.results || []),
     ...(compRes?.results || []),
     ...(painRes?.results || []),
@@ -528,58 +579,66 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
     ...(googleFallback || []).map((g: any) => ({ url: g.link, title: g.title, score: 0.5 }))
   ];
 
-  const uniqueUrls = new Set<string>();
-  const finalizedSources: { url: string; title: string; confidence: 'high'|'medium'|'low' }[] = [];
-  const rejectedSources: { url: string; title: string; reason: string }[] = [];
-  let staleSourceCount = 0;
-  let irrelevantSourceCount = 0;
-  let oldestYear: number | null = null;
-  let freshCount = 0;
-
-  const currentYear = new Date().getFullYear();
-
-  for (const src of rawSources) {
+  // First pass: Heuristic filtering
+  const candidateSources = [];
+  for (const src of rawSourcesList) {
     if (!src || !src.url) continue;
-    
-    // Normalize URL to deduplicate (strip trailing slashes, tracking params)
     const cleanUrl = src.url.split('?')[0].replace(/\/$/, "");
-    
-    if (!uniqueUrls.has(cleanUrl)) {
-      uniqueUrls.add(cleanUrl);
-      
-      const quality = scoreSource(cleanUrl, src.title || '', nicheKeywords, src.score, intake.geography);
-      
-      if (quality.reject) {
-        rejectedSources.push({
-          url: cleanUrl,
-          title: src.title || cleanUrl,
-          reason: quality.rejectReason || 'Failed quality check',
-        });
-        irrelevantSourceCount++;
-        continue; // Skip this source entirely
-      }
-      
-      // Track freshness stats
-      if (quality.year) {
-        if (oldestYear === null || quality.year < oldestYear) {
-          oldestYear = quality.year;
-        }
-        if (currentYear - quality.year <= 2) {
-          freshCount++;
-        } else {
-          staleSourceCount++;
-        }
-      } else {
-        // Unknown age — count as fresh by default
-        freshCount++;
-      }
+    if (uniqueUrls.has(cleanUrl)) continue;
+    uniqueUrls.add(cleanUrl);
 
-      finalizedSources.push({
-        url: cleanUrl,
-        title: src.title || cleanUrl,
-        confidence: quality.confidence,
-      });
+    const quality = scoreSource(cleanUrl, src.title || '', nicheKeywords, src.score, intake.geography);
+    if (quality.reject) {
+      rejectedSources.push({ url: cleanUrl, title: src.title || cleanUrl, reason: quality.rejectReason || 'Heuristic filter' });
+      irrelevantSourceCount++;
+      continue;
     }
+    candidateSources.push({ ...src, cleanUrl, quality });
+  }
+
+  // Second pass: LLM Relevance Filter on top 12 candidates
+  console.log(`[Orchestrator] Auditing top ${Math.min(candidateSources.length, 12)} sources for semantic relevance...`);
+  const validationPromises = candidateSources.slice(0, 12).map(async (src) => {
+    const audit = await evaluateSourceRelevance(
+      `${src.title} ${src.content || ''}`,
+      intake.niche,
+      intake.uniqueInsight
+    );
+    return { ...src, audit };
+  });
+
+  const auditedSources = await Promise.all(validationPromises);
+
+  for (const src of auditedSources) {
+    if (!src.audit.shouldKeep && src.audit.relevanceScore < 4) {
+      rejectedSources.push({ url: src.cleanUrl, title: src.title || src.cleanUrl, reason: `LLM Audit: ${src.audit.reasoning}` });
+      irrelevantSourceCount++;
+      continue;
+    }
+
+    // Accept validated source
+    if (src.quality.year) {
+      if (oldestYear === null || src.quality.year < oldestYear) oldestYear = src.quality.year;
+      if (currentYear - src.quality.year <= 2) freshCount++;
+      else staleSourceCount++;
+    } else {
+      freshCount++;
+    }
+
+    finalizedSources.push({
+      url: src.cleanUrl,
+      title: src.title || src.cleanUrl,
+      confidence: src.quality.confidence,
+    });
+  }
+
+  // Add remaining candidates (beyond the top 12) without LLM audit to keep source count healthy
+  for (const src of candidateSources.slice(12)) {
+    finalizedSources.push({
+      url: src.cleanUrl,
+      title: src.title || src.cleanUrl,
+      confidence: src.quality.confidence,
+    });
   }
 
   const totalAccepted = finalizedSources.length;

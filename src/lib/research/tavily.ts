@@ -52,6 +52,13 @@ async function tavilySearch(query: string, options?: any) {
   return { results: [], answer: '' }; // Added answer to fallback
 }
 
+/**
+ * v5: generic search wrapper to handle expanded queries from the LongCat Query Planner.
+ */
+export async function searchGeneric(query: string, options?: any) {
+  return await tavilySearch(query, options);
+}
+
 // -- Research Domains --
 
 export async function searchMarket(niche: string, geography: string) {
