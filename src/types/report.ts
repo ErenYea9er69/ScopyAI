@@ -311,14 +311,29 @@ export type Layer6 = z.infer<typeof layer6Schema>;
 // -- Layer 7: Anti-Commoditisation --
 
 export const layer7Schema = z.object({
+  counterPositioning: z.array(z.object({
+    incumbentWeakness: z.string(),
+    userCounterStrategy: z.string(),
+    reasoning: z.string(),
+  })),
   moats: z.array(z.object({
     type: z.string(),
     strategy: z.string(),
     implementation: z.string(),
-    timeToEffect: z.string(),
-    confidence: z.preprocess((val) => String(val).toLowerCase(), z.enum(['high', 'medium', 'low'])).catch('medium'),
-    estimatedCost: z.string().optional().default('Not estimated'),
+    decayRisk: z.enum(['high', 'medium', 'low']),
+    aiResilience: z.string(),
+    confidence: confidenceLevel,
   })),
+  moatFlywheel: z.array(z.object({
+    phase: z.string(),
+    moatFocus: z.string(),
+    howItScales: z.string(),
+  })),
+  migrationFrictionScore: z.object({
+    score: z.number().min(0).max(10),
+    frictionFactors: z.array(z.string()),
+    verdict: z.string(),
+  }),
   notFound: z.array(z.string()).min(1).default(["No additional limitations identified"]),
 });
 export type Layer7 = z.infer<typeof layer7Schema>;

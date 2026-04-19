@@ -412,7 +412,9 @@ function buildLayerSummary(layers: FullReport['layers']): string {
   }
 
   if (layers.layer7) {
-    parts.push(`[L7 MOAT] Strategies: ${layers.layer7.moats?.slice(0, 3).map(m => m.type).join(', ') || '?'}`);
+    parts.push(`[L7 MOAT] Counter-Positioning: ${layers.layer7.counterPositioning?.slice(0, 1).map(c => c.userCounterStrategy).join('') || '?'}`);
+    parts.push(`[L7 MOAT] Migration Friction: ${layers.layer7.migrationFrictionScore?.score || 0}/10`);
+    parts.push(`[L7 MOAT] Top strategies: ${layers.layer7.moats?.slice(0, 2).map(m => m.type).join(', ') || '?'}`);
   }
 
   return parts.join('\n');

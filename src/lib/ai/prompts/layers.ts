@@ -545,21 +545,17 @@ export function layer7Prompt(
   userContext?: { stage?: string; budget?: string; uniqueInsight?: string }
 ) {
   const system = `
-You are the Anti-Commoditisation module. For the given niche, generate 3 to 6 moat strategies from this menu:
-data advantage, workflow deep-integration, network effect, regulatory moat,
-community moat, and switching cost architecture.
-
-CRITICAL: SKIP any moat type that is irrelevant or impossible for a user at this stage and budget.
-A bootstrapped MVP with $0 budget should NOT see a regulatory moat or a network effect moat.
-Only include moats the user could realistically BEGIN building within their current constraints.
+You are the Anti-Commoditisation (Defensibility) module.
+Your job is to identify "Offensive Moats" (Counter-Positioning) and "AI-Resistant" defensive barriers.
 
 ${DATA_INTEGRITY_RULES}
 
-Each moat must include: type, strategy, implementation steps, time to effect, confidence level, and estimated cost.
-
 OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers).
 {
-  "moats": [ { "type": "string", "strategy": "string", "implementation": "string", "timeToEffect": "string", "confidence": "high|medium|low", "estimatedCost": "string" } ],
+  "counterPositioning": [ { "incumbentWeakness": "string", "userCounterStrategy": "string", "reasoning": "string" } ],
+  "moats": [ { "type": "string", "strategy": "string", "implementation": "string", "decayRisk": "high|medium|low", "aiResilience": "string", "confidence": "high|medium|low" } ],
+  "moatFlywheel": [ { "phase": "string", "moatFocus": "string", "howItScales": "string" } ],
+  "migrationFrictionScore": { "score": 0, "frictionFactors": ["string"], "verdict": "string" },
   "notFound": ["string"]
 }
 `.trim();
@@ -578,24 +574,29 @@ ${researchBlock(research.competitors)}
 === AUDIENCE PAIN POINTS ===
 ${researchBlock(research.painPoints)}
 
-IMPORTANT: Your moat strategies MUST account for the upstream risk data.
-If the market is saturated, focus on moats that create differentiation, not just scale.
-Build moats around the user's unique insight where possible — that's their natural edge.
-Order moats from most achievable (given user's stage and budget) to most aspirational.
-Be specific about HOW to build each moat for this exact niche.
+Based on the research, produce Layer 7 Anti-Commoditisation Intelligence.
 
-MOAT COST CAP (HARD CONSTRAINT):
-- After generating all moat strategies, SUM their estimatedCost values.
-- If the combined total exceeds the user's budget, REMOVE the most expensive moats until the total fits.
-- A moat portfolio that costs more than the entire budget is fiction — the user cannot build moats before building the product.
-- If the user has $5,000 total, moat strategies should cost no more than 30% of that ($1,500) — the rest is needed for product, legal, and marketing.
+COUNTER-POSITIONING STRATEGY:
+- Identify the "Structural Weakness" of incumbents: 
+  * Examples: Their pricing model (they can't lower it without losing profit), their tech debt, or their target audience (they are too Enterprise-focused).
+- How can the user attack that weakness? (e.g., "Usage-based pricing for SMBs" vs their "Seat-based pricing for Enterprise").
 
-SWITCHING COST ETHICS (CRITICAL):
-- Switching cost moats MUST comply with GDPR Article 20 (right to data portability).
-- You MUST NOT recommend deliberately degrading data exports, withholding synthesized scores, or making export formats incompatible.
-- These are dark patterns and regulatory liabilities in health data contexts.
-- Valid switching costs: personalized baselines that take time to rebuild, community relationships, integration depth with user's existing tools.
-- INVALID switching costs: data hostage-taking, incomplete exports, proprietary lock-in of health data.
+MOAT DECAY & AI RESILIENCE:
+- Evaluate the risk of "Moat Decay" — will this moat be bypassed by OpenAI/Apple/Google in 12 months?
+- Identify moats that are "AI-Resistant" (Community, Regulatory, proprietary RLHF/Feedback loops).
+
+MOAT FLYWHEEL (SEQUENCING):
+- Map out the sequence of moats: 
+  * Phase 1: Achievable Moat (e.g., Community/Insight).
+  * Phase 2: Derived Moat (e.g., Proprietary data from Phase 1).
+  * Phase 3: Scale Moat (e.g., Network effects).
+
+MIGRATION FRICTION:
+- Quantify the switching cost (0-10). Be specific about what makes it hard for a customer to leave (e.g., "Personalized baseline data" or "Integration depth").
+
+SWITCHING COST ETHICS:
+- Valid switching costs: Personalized baselines, community, integration depth.
+- INVALID switching costs: Data hostage-taking, proprietary data lock-in, poor export formats.
 `.trim();
 
   return { system, user };
@@ -603,41 +604,51 @@ SWITCHING COST ETHICS (CRITICAL):
 
 // ========== LAYER 8 — PERSONA-SPECIFIC ==========
 
-const PERSONA_MODULE_MAP: Record<Archetype, string[]> = {
+const PERSONA_MODULE_BANK: Record<Archetype, string[]> = {
   dev: [
-    'GitHub / Stack Overflow Audit',
-    'API Dependency Risk',
-    'Tech Stack Saturation',
-    'Build vs Buy Analysis',
-    'OSS Cannibalisation Risk',
+    'Technical Build vs Buy (Labor vs API Cost Audit)',
+    'Obsolescence Pivot Plan (Technical Sherlock Defense)',
+    'API & Dependency Risk Teardown',
+    'GitHub / OSS Competition Scan',
+    'Tech Stack Scalability & Saturation',
+    'Regulatory Tech Compliance (GDPR/HIPAA Roadmap)',
+    'Unit-Economic Tech Audit (Token/Hosting Optimization)',
   ],
   marketer: [
-    'Ad-Library Teardown',
-    'High-Converting Hooks',
-    'Channel ROI Breakdown',
-    'Creative Direction Brief',
-    'Funnel Blueprint',
+    'Ad-Library Strategy Teardown',
+    'High-Converting Creative Direction Brief',
+    'Conversion Rate Reality Anchor (Reality-Check GTM)',
+    'Arrogant Competitor Counter-Messaging',
+    'Funnel Architecture & Drop-off Prediction',
+    'Marketing Pillar Alignment Matrix',
+    'Psychological Hook & Angle Templates',
   ],
   creator: [
-    'Willingness-to-Pay Data',
-    'Audience Leakage Analysis',
-    'Platform Arbitrage Opportunities',
-    'First 100 Customers Playbook',
-    'Revenue Ladder Strategy',
+    'Thumbnail & Packaging "Algorithm Fit" Strategy',
+    'Audience Migration & Retention Strategy',
+    'Digital Product Value-Ladder Blueprint',
+    'Creator-Led GTM Playbook (The First 100)',
+    'Platform Arbitrage (Finding Undervalued Attention)',
+    'Community-First Flywheel Design',
+    'Sponsorship & Revenue Tier Optimization',
   ],
   consultant: [
-    'White-Label Audit',
-    'Stakeholder Friction Map',
-    '12-Month ROI Roadmap',
-    'Authority Deliverable Design',
-    'Rate Optimizer',
+    'Consultative Sales Objection Handling Matrix',
+    'Executive-Level ROI Roadmap (12-Month)',
+    'Stakeholder "Friction" Power-Map',
+    'White-Label & Authority Deliverable Design',
+    'Rate Optimization & Tiered Value-Pricing',
+    'Sales Script Teardown (High-Ticket Focus)',
+    'Implementation Velocity Checklist',
   ],
   general: [
-    'Local Demand Heatmap',
-    'Micro-Business Viability',
-    'Skill-to-Market Bridge',
-    'Launch Requirements Checklist',
+    'Local Market Demand Heatmap',
+    'Micro-SaaS / Side-Hustle Viability Score',
+    'Skill-to-Market Gap Analysis',
+    'Launch Liability & Requirement Audit',
+    'Immediate Operational First-Steps (Phase 0)',
     'Hyper-Local Competition Scan',
+    'Founder-Market Fit Strength Audit',
   ],
 };
 
@@ -647,19 +658,25 @@ export function layer8Prompt(
   research: { painPoints: string[]; competitors: string[]; marketSize: string[] },
   userContext?: { budget?: string; time?: string; assets?: string[]; stage?: string; uniqueInsight?: string; acquisitionChannel?: string; revenueModel?: string },
   geo?: string,
-  batch1Context?: string
+  batch1Context?: string,
+  batch2Context?: string
 ) {
-  const modules = PERSONA_MODULE_MAP[archetype];
+  const bank = PERSONA_MODULE_BANK[archetype];
 
   const system = `
-You are the Persona-Specific Intelligence module. The user has been classified as a "${archetype}" archetype.
+You are the Persona-Specific Intelligence module for the "${archetype}" archetype.
 
 ${DATA_INTEGRITY_RULES}
-Generate the following 5 specialised modules tailored to their archetype:
-${modules.map((m, i) => `${i + 1}. ${m}`).join('\n')}
 
-Each module must include: title, content (detailed analysis), confidence level, and source citations.
-Modules MUST be personalized to THIS user's actual budget, timeline, assets, and stage — not generic advice.
+DYNAMIC MODULE SELECTION (CRITICAL):
+Your Persona Bank for "${archetype}" contains these options:
+${bank.map((m, i) => `${i + 1}. ${m}`).join('\n')}
+
+Based on the research and earlier layer conclusions, SELECT the 5 most high-impact, relevant modules.
+For example, if the research shows high competitor saturation, select "Counter-Messaging." If there is high platform risk, select "Sherlock Defense."
+Do NOT just pick the first 5. Prioritise intelligence that addresses a specific gap or risk found in Layers 1-7.
+
+Each module must include: title, content (deep strategic analysis), confidence level, and source citations.
 
 OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers).
 {
@@ -673,27 +690,17 @@ NICHE: ${niche}
 PERSONA: ${archetype}
 GEOGRAPHY: ${geo || 'Not specified'}
 USER BUDGET: ${userContext?.budget || 'Not specified'}
-USER TIME: ${userContext?.time || 'Not specified'}
-USER ASSETS: ${userContext?.assets?.join(', ') || 'None specified'}
 USER STAGE: ${userContext?.stage || 'Not specified'}
 UNIQUE INSIGHT: ${userContext?.uniqueInsight || 'None'}
-ACQUISITION CHANNEL: ${userContext?.acquisitionChannel || 'Not specified'}
-REVENUE MODEL: ${userContext?.revenueModel || 'Not specified'}
 
 ${batch1Context || ''}
+${batch2Context || ''}
 
 === RESEARCH DATA ===
 ${researchBlock([...research.painPoints, ...research.competitors, ...research.marketSize])}
 
-Make each module actionable and specific to how a "${archetype}" with THIS budget, timeline, and stage would execute in this niche.
-Do NOT generate generic advice. Reference the user's specific assets and constraints.
-
-API AND PARTNERSHIP AVAILABILITY VERIFICATION:
-- Do NOT list any API as a "distribution leverage" or "partnership opportunity" unless the research data contains evidence of a PUBLIC commercial API with documented pricing and access instructions.
-- GitHub benchmark repos, research code, internal tools, and academic implementations are NOT public commercial APIs.
-- If no public API documentation was found in research, state: "API not publicly available — partnership opportunity is speculative and should not be relied upon in GTM planning."
-- If a company is listed as BOTH a threat (in gorilla competitors / AI disruption) AND a partnership opportunity, that is a CONTRADICTION. A company that threatens to commoditise your value proposition will not partner with you to preserve it. Choose one classification.
+Identify the 5 most critical strategic modules for a "${archetype}" building in this niche.
+Reference specific competitors, unit economics, and risk signals from the context blocks.
 `.trim();
-
   return { system, user };
 }
