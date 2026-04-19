@@ -80,21 +80,34 @@ export const layer2Schema = z.object({
   tam: z.object({ range: z.string(), confidence: confidenceLevel, sources: z.array(z.coerce.string()).optional().default([]) }),
   sam: z.object({ range: z.string(), confidence: confidenceLevel, sources: z.array(z.coerce.string()).optional().default([]) }),
   som: z.object({ range: z.string(), confidence: confidenceLevel, sources: z.array(z.coerce.string()).optional().default([]) }),
-  trendTrajectory: z.object({
+  proxyMarketComparison: z.object({
+    parentMarket: z.string(),
+    penetrationPotential: z.string(),
+    ceilingProxy: z.string(),
+  }),
+  capturedEase: z.object({
+    score: z.number().min(0).max(10),
+    reasoning: z.string(),
+  }),
+  geographicExpansionMap: z.object({
+    tier1: z.array(z.string()),
+    tier2: z.array(z.string()),
+    tier3: z.array(z.string()),
+    reasoning: z.string(),
+  }),
+  marketMomentum: z.object({
     direction: z.enum(['growing', 'stable', 'declining']),
+    velocityScore: z.number().min(0).max(100),
     searchVolumeTrend: z.string(),
-    socialVelocity: z.string(),
+    socialSentiment: z.string(),
     fundingActivity: z.string(),
-    mediaCoverage: z.string(),
   }),
-  internationalOpportunity: z.object({
-    bestAlternateMarket: z.string(),
-    tamMultiplier: z.string(),
-    competitionReduction: z.string(),
-  }),
-  adjacentMarkets: z.array(z.object({ market: z.string(), overlap: z.string(), opportunity: z.string() })),
+  macroInflectionPoints: z.array(z.object({
+    trigger: z.string(),
+    marketImpact: z.string(),
+    timing: z.string(),
+  })),
   marketTimingVerdict: z.string(),
-  sentimentVelocity: z.object({ overall: z.string(), trend: z.string() }),
   notFound: z.array(z.string()).min(1).default(["No additional limitations identified"]),
 });
 export type Layer2 = z.infer<typeof layer2Schema>;

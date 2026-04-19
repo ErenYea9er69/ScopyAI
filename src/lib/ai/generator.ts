@@ -304,9 +304,9 @@ function buildBatch1Summary(layers: FullReport['layers']): string {
   if (layers.layer2) {
     const l2 = layers.layer2;
     parts.push(`[MARKET] TAM: ${l2.tam?.range || 'Unknown'} (confidence: ${l2.tam?.confidence || 'low'})`);
-    parts.push(`[MARKET] Trend: ${l2.trendTrajectory?.direction || 'Unknown'} — ${l2.trendTrajectory?.searchVolumeTrend || ''}`);
+    parts.push(`[MARKET] Momentum: ${l2.marketMomentum?.direction || 'Unknown'} (Score: ${l2.marketMomentum?.velocityScore || 0}/100)`);
+    parts.push(`[MARKET] Captured Ease: ${l2.capturedEase?.score || 0}/10 — ${l2.capturedEase?.reasoning || ''}`);
     parts.push(`[MARKET] Timing verdict: ${l2.marketTimingVerdict || 'Unknown'}`);
-    parts.push(`[MARKET] Sentiment: ${l2.sentimentVelocity?.overall || 'Unknown'}`);
   } else {
     parts.push(`[MARKET] ⚠️ Layer 2 FAILED — no market data available. Do NOT invent TAM/SAM numbers. Treat all market-dependent claims as confidence: "low".`);
   }
@@ -366,13 +366,15 @@ function buildLayerSummary(layers: FullReport['layers']): string {
   const parts: string[] = ['=== REPORT CLAIMS TO EVALUATE ==='];
 
   if (layers.layer1) {
-    parts.push(`[L1 AUDIENCE] Top pains: ${layers.layer1.painPoints?.slice(0, 3).map(p => `${p.pain} (${p.confidence})`).join('; ') || 'None'}`);
+    parts.push(`[L1 AUDIENCE] Jobs: ${layers.layer1.jobsToBeDone?.functional || 'None'}`);
+    parts.push(`[L1 AUDIENCE] Awareness: ${layers.layer1.marketAwareness || 'Unknown'}`);
     parts.push(`[L1 AUDIENCE] Price range: ${layers.layer1.paymentThreshold?.low || '?'} – ${layers.layer1.paymentThreshold?.high || '?'}`);
   }
 
   if (layers.layer2) {
     parts.push(`[L2 MARKET] TAM: ${layers.layer2.tam?.range || '?'} (${layers.layer2.tam?.confidence || 'low'})`);
-    parts.push(`[L2 MARKET] Trend: ${layers.layer2.trendTrajectory?.direction || '?'}`);
+    parts.push(`[L2 MARKET] Momentum: ${layers.layer2.marketMomentum?.direction || '?'} (Score: ${layers.layer2.marketMomentum?.velocityScore || 0}/100)`);
+    parts.push(`[L2 MARKET] Captured Ease: ${layers.layer2.capturedEase?.score || 0}/10`);
     parts.push(`[L2 MARKET] Timing: ${layers.layer2.marketTimingVerdict || '?'}`);
   }
 

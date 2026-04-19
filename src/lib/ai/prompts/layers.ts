@@ -154,7 +154,8 @@ export function layer2Prompt(
 ) {
   const system = `
 You are the Market Intelligence module. Provide TAM/SAM/SOM with confidence ranges (NOT single numbers),
-5-year trend trajectory, international opportunity, adjacent markets, timing verdict, and sentiment velocity.
+identify proxy markets for niche ideas, provide a tiered geographic expansion roadmap, 
+calculate "Ease of Capture" scores, and identify macro inflection points.
 
 ${DATA_INTEGRITY_RULES}
 
@@ -163,11 +164,12 @@ OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers)
   "tam": { "range": "string", "confidence": "high|medium|low", "sources": ["url"] },
   "sam": { "range": "string", "confidence": "high|medium|low", "sources": ["url"] },
   "som": { "range": "string", "confidence": "high|medium|low", "sources": ["url"] },
-  "trendTrajectory": { "direction": "growing|stable|declining", "searchVolumeTrend": "string", "socialVelocity": "string", "fundingActivity": "string", "mediaCoverage": "string" },
-  "internationalOpportunity": { "bestAlternateMarket": "string", "tamMultiplier": "string", "competitionReduction": "string" },
-  "adjacentMarkets": [ { "market": "string", "overlap": "string", "opportunity": "string" } ],
+  "proxyMarketComparison": { "parentMarket": "string", "penetrationPotential": "string", "ceilingProxy": "string" },
+  "capturedEase": { "score": 0, "reasoning": "string" },
+  "geographicExpansionMap": { "tier1": ["string"], "tier2": ["string"], "tier3": ["string"], "reasoning": "string" },
+  "marketMomentum": { "direction": "growing|stable|declining", "velocityScore": 0, "searchVolumeTrend": "string", "socialSentiment": "string", "fundingActivity": "string" },
+  "macroInflectionPoints": [ { "trigger": "string", "marketImpact": "string", "timing": "string" } ],
   "marketTimingVerdict": "string",
-  "sentimentVelocity": { "overall": "string", "trend": "string" },
   "notFound": ["string"]
 }
 `.trim();
@@ -183,33 +185,42 @@ ${qualitySummary ? qualityHeader(qualitySummary) : ''}
 === RESEARCH DATA ===
 ${researchBlock([...research.marketSize, ...research.trends])}
 
-Produce Layer 2 Market Intelligence. Use ranges not point estimates. Cite sources.
-IMPORTANT: If a buyer type is specified, calculate TAM/SAM/SOM for THAT segment specifically.
-If the user provided a "WHY NOW" signal, factor it into your market timing verdict — it may indicate a regulatory change, competitor exit, or technology shift that affects timing.
-If user stage is pre-MVP, focus SOM on validation-addressable market. If scaling, focus on growth ceiling.
+Based on the research, produce Layer 2 Market Intelligence.
+
+PROXY MARKET ANALYSIS:
+- If this niche is too small for official TAM reports, identify a "Parent Market" (e.g., "SaaS for Law Firms" -> "Legal Tech").
+- Estimate penetration potential and use the parent market as a ceiling proxy.
+
+GEOGRAPHIC TIERING:
+- Map international scaling opportunities into 3 Tiers:
+  * Tier 1: Immediate expansion (High demand, manageable competition).
+  * Tier 2: Secondary targets (Emerging demand or higher barriers).
+  * Tier 3: Long-term moonshots or highly competitive regions.
+
+CAPTURED EASE (SOM VELOCITY):
+- Score 0-10 how easy it is to capture the SOM. 
+- High score (8-10) = Fragmented market, low switching costs, platform openness. 
+- Low score (0-3) = Strong incumbents, high regulation, walled gardens.
+
+MACRO INFLECTION POINTS:
+- Identify 2-3 regulatory, technological, or social "triggers" that will significantly expand or contract this market in the next 12-24 months.
+
+MARKET MOMENTUM:
+- Calculate a "Velocity Score" (0-100) combining search volume, funding, and social sentiment.
 
 TAM SOURCE VALIDATION:
-- Before citing any source for TAM/SAM/SOM, verify the source URL is from a market research provider (Statista, Grand View Research, IBISWorld, Gartner, Mordor Intelligence, government statistics) or a credible industry report.
-- Podcast RSS feeds, social media posts, blog opinions, and general news articles are NOT valid TAM sources.
-- If a source URL contains "feeds.", ".rss", "acast.com", "podcast", or "anchor.fm", do NOT use it for market sizing.
-- If NO valid TAM source exists in the research data, set TAM range to "Insufficient data — no verified market sizing available for this niche/geography" and confidence to "low".
-- Distinguish between FUNDING raised by companies (venture capital) and actual MARKET SIZE. $13.5M raised by one startup is NOT evidence of a $13.5M market.
+- Before citing any source for TAM/SAM/SOM, verify the source URL is from a market research provider (Statista, Grand View Research, etc.) or a credible industry report.
+- Podcast RSS feeds, social media, and general news are NOT valid TAM sources.
+- If NO valid TAM source exists, you MUST compute a bottom-up TAM estimate using the population/participation numbers found in the research.
 
 DECLINE SIGNAL CHECK:
-- If any research data contains [⚠️ DECLINE SIGNAL] tags, you MUST factor these into your trend trajectory and market timing verdict.
-- A declining market with shrinking participation is NOT "growing" regardless of other signals.
-- If decline signals conflict with growth signals, set trendTrajectory.direction to "stable" at most, explain the conflict, and note it in notFound.
+- If any research data contains [⚠️ DECLINE SIGNAL] tags, you MUST factor these into your momentum direction and timing verdict.
 
-BOTTOM-UP TAM FALLBACK (MANDATORY when no market research reports exist):
-- If ZERO verified market research reports are found in the research data, you MUST compute a bottom-up TAM estimate.
-- Step 1: Extract participation/population numbers from research (e.g., sport registrations, platform users, demographic data).
-- Step 2: Apply geographic share (e.g., UK = X% of global), demographic filter (e.g., age 40+ = Y%), and willingness-to-pay filter (typically 5-15% for niche products).
-- Step 3: Calculate: Total Relevant Population × Geographic Share × Demographic Match × WTP Rate × Annual Price = TAM estimate.
-- Step 4: Show the funnel transparently with ALL assumptions visible.
-- Label clearly: "TAM estimated via bottom-up proxy calculation. Confidence: medium."
-- Example: "344K CrossFit Open athletes → 2.5% UK share (~8,600) → 25% Masters 40+ (~2,150) → 15% WTP (~320) → @ £300/yr = ~£96K max TAM"
-- CRITICAL: If bottom-up TAM < £500K, add to notFound: "⚠️ MICRO-NICHE: Bottom-up TAM estimate is below £500K — insufficient for standalone SaaS business at standard VC return expectations. Viable only as lifestyle/solo operator business."
-- Do NOT output "Insufficient data" — ALWAYS produce at least a bottom-up estimate.
+BOTTOM-UP TAM FALLBACK:
+- Step 1: Extract population numbers (e.g., athletes, platform users).
+- Step 2: Apply geographic/demographic/WTP filters.
+- Step 3: Show the funnel assumptions visible in sam/som reasoning.
+- CRITICAL: If bottom-up TAM < £500K, flag as "MICRO-NICHE" in notFound.
 `.trim();
 
   return { system, user };
