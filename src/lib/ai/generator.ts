@@ -195,7 +195,15 @@ export async function generateReport(
       fullContext = `\n⚠️ COMPLEXITY-BUDGET MISMATCH: ${complexityWarning}\n` + fullContext;
     }
     await runLayer('layer8', async () => {
-      const p = layer8Prompt(intake.niche, persona.archetype as Archetype, research, userContext, intake.geography, fullContext);
+      const p = layer8Prompt(
+        intake.niche, 
+        persona.archetype as Archetype, 
+        research, 
+        userContext, 
+        intake.geography, 
+        batch1Context, 
+        batch2Context
+      );
       const result = await generateStructuredOutput(p.system, p.user, layer8Schema, MODELS.REASONING);
       report.layers.layer8 = result;
     }, onProgress);
