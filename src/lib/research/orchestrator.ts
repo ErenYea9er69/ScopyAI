@@ -51,6 +51,7 @@ export type ResearchData = {
     irrelevantSourceCount: number;
     oldestSourceYear: number | null;
     freshSourcePercentage: number;
+    sourceAuthorityBreakdown: { tier1: number; tier2: number; tier3: number; tier4: number };
     summary: string;
   };
   unscrapedCompetitorUrls?: string[];
@@ -139,9 +140,10 @@ function extractYear(text: string): number | null {
 
 /**
  * Scores a source's quality on multiple dimensions.
- * Returns a confidence level and whether to reject the source entirely.
+ * Returns a confidence level, authority tier, and whether to reject the source entirely.
  * 
  * v3: Added .edu platform exclusion, geography relevance check.
+ * v4: Added strict 2023+ date filtering for tech niches and 4-tier authority system.
  */
 function scoreSource(
   url: string,
@@ -149,7 +151,7 @@ function scoreSource(
   nicheKeywords: string[],
   score?: number,
   targetGeography?: string
-): { confidence: 'high' | 'medium' | 'low'; reject: boolean; rejectReason?: string; year: number | null } {
+): { confidence: 'high' | 'medium' | 'low'; reject: boolean; rejectReason?: string; year: number | null; tier: 1 | 2 | 3 | 4 } {
   const cleanUrl = url.toLowerCase();
   const cleanTitle = (title || '').toLowerCase();
   const combined = `${cleanUrl} ${cleanTitle}`;
@@ -157,14 +159,14 @@ function scoreSource(
   // 1. REJECT CHECK — is this domain completely irrelevant?
   for (const pattern of REJECT_DOMAIN_PATTERNS) {
     if (pattern.test(cleanUrl)) {
-      return { confidence: 'low', reject: true, rejectReason: `Irrelevant domain pattern: ${pattern.source}`, year: null };
+      return { confidence: 'low', reject: true, rejectReason: `Irrelevant domain pattern: ${pattern.source}`, year: null, tier: 4 };
     }
   }
   
   // Check if URL is an RSS/XML feed or podcast platform
   if (cleanUrl.includes('acast.com') || cleanUrl.includes('anchor.fm') || cleanUrl.includes('podbean.com') ||
       (cleanUrl.includes('/feed') && (cleanUrl.includes('.xml') || cleanUrl.includes('rss')))) {
-    return { confidence: 'low', reject: true, rejectReason: 'Podcast/RSS feed — not a market research source', year: null };
+    return { confidence: 'low', reject: true, rejectReason: 'Podcast/RSS feed — not a market research source', year: null, tier: 4 };
   }
 
   // 2. GEOGRAPHY RELEVANCE CHECK — reject sources about wrong countries
@@ -175,7 +177,7 @@ function scoreSource(
       if (cleanTitle.includes(wrongGeo) && 
           (cleanTitle.includes('market') || cleanTitle.includes('report') || cleanTitle.includes('forecast')) &&
           !cleanTitle.includes(targetGeoLower)) {
-        return { confidence: 'low', reject: true, rejectReason: `Source is about ${wrongGeo} market, but target geography is ${targetGeography}`, year: null };
+        return { confidence: 'low', reject: true, rejectReason: `Source is about ${wrongGeo} market, but target geography is ${targetGeography}`, year: null, tier: 4 };
       }
     }
   }
@@ -185,42 +187,56 @@ function scoreSource(
   if (!hasRelevance && nicheKeywords.length > 0) {
     // Give benefit of the doubt if search score is high
     if (!score || score < 0.6) {
-      return { confidence: 'low', reject: true, rejectReason: `No niche keyword match in title/URL. Keywords checked: ${nicheKeywords.slice(0, 3).join(', ')}`, year: extractYear(combined) };
+      return { confidence: 'low', reject: true, rejectReason: `No niche keyword match in title/URL. Keywords checked: ${nicheKeywords.slice(0, 3).join(', ')}`, year: extractYear(combined), tier: 4 };
     }
   }
 
-  // 4. FRESHNESS CHECK
+  // 4. STRICT FRESHNESS CHECK (v4)
   const year = extractYear(combined);
   const currentYear = new Date().getFullYear();
+  
+  // Reject tech/SaaS sources older than 2023
+  const isTechNiche = nicheKeywords.some(kw => ['ai', 'saas', 'software', 'app', 'developer', 'crypto'].includes(kw.toLowerCase()));
+  if (isTechNiche && year !== null && year < 2023) {
+    return { confidence: 'low', reject: true, rejectReason: `Source is too old (${year}) for rapidly evolving tech niche. Required: 2023+.`, year, tier: 4 };
+  }
+  
   const isStale = year !== null && (currentYear - year) > 2;
 
-  // 5. AUTHORITY TIER
+  // 5. AUTHORITY TIER (v4)
   const isHighAuthority = HIGH_AUTHORITY_DOMAINS.some(d => cleanUrl.includes(d));
   const isInstitutional = INSTITUTIONAL_DOMAINS.some(d => cleanUrl.includes(d));
-  const isRedditQuora = cleanUrl.includes('reddit.com') || cleanUrl.includes('quora.com');
+  const isRedditQuora = cleanUrl.includes('reddit.com') || cleanUrl.includes('quora.com') || cleanUrl.includes('ycombinator.com');
+  const isNews = cleanUrl.includes('news') || cleanUrl.includes('techcrunch') || cleanUrl.includes('forbes') || cleanUrl.includes('wsj');
+  
+  let tier: 1 | 2 | 3 | 4 = 4;
+  if (isHighAuthority || isInstitutional) tier = 1;
+  else if (isNews) tier = 2;
+  else if (!isRedditQuora && (score && score > 0.7)) tier = 3;
+  else tier = 4;
   
   // v3: Check if .edu domain is actually an educational platform, not research
   if (isInstitutional && cleanUrl.includes('.edu')) {
     const isEduPlatform = EDU_PLATFORM_EXCLUSIONS.some(excl => cleanUrl.includes(excl));
     if (isEduPlatform) {
-      return { confidence: 'low', reject: true, rejectReason: `Educational platform (${cleanUrl.split('/')[2]}), not academic research`, year: null };
+      return { confidence: 'low', reject: true, rejectReason: `Educational platform (${cleanUrl.split('/')[2]}), not academic research`, year: null, tier: 4 };
     }
   }
   
-  if (isHighAuthority || isInstitutional) {
-    return { confidence: isStale ? 'medium' : 'high', reject: false, year };
+  if (tier === 1) {
+    return { confidence: isStale ? 'medium' : 'high', reject: false, year, tier };
   }
   
   if (isRedditQuora) {
     // Reddit/Quora are valid for pain points but low authority for market sizing
-    return { confidence: 'medium', reject: false, year };
+    return { confidence: 'medium', reject: false, year, tier };
   }
   
-  if (score && score > 0.8) {
-    return { confidence: isStale ? 'low' : 'medium', reject: false, year };
+  if (tier === 2 || tier === 3) {
+    return { confidence: isStale ? 'low' : 'medium', reject: false, year, tier };
   }
   
-  return { confidence: isStale ? 'low' : 'low', reject: false, year };
+  return { confidence: 'low', reject: false, year, tier };
 }
 
 /**
@@ -580,6 +596,7 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
   let irrelevantSourceCount = 0;
   let oldestYear: number | null = null;
   let freshCount = 0;
+  let tiers = { tier1: 0, tier2: 0, tier3: 0, tier4: 0 };
 
   const currentYear = new Date().getFullYear();
   const rawSourcesList = [
@@ -647,6 +664,12 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
       title: src.title || src.cleanUrl,
       confidence: src.quality.confidence,
     });
+    
+    // Track authority tier
+    if (src.quality.tier === 1) tiers.tier1++;
+    else if (src.quality.tier === 2) tiers.tier2++;
+    else if (src.quality.tier === 3) tiers.tier3++;
+    else tiers.tier4++;
   }
 
   // Add remaining candidates (beyond the top 12) without LLM audit to keep source count healthy
@@ -656,6 +679,11 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
       title: src.title || src.cleanUrl,
       confidence: src.quality.confidence,
     });
+    
+    if (src.quality.tier === 1) tiers.tier1++;
+    else if (src.quality.tier === 2) tiers.tier2++;
+    else if (src.quality.tier === 3) tiers.tier3++;
+    else tiers.tier4++;
   }
 
   const totalAccepted = finalizedSources.length;
@@ -675,19 +703,27 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
     irrelevantSourceCount,
     oldestSourceYear: oldestYear,
     freshSourcePercentage: freshPercentage,
-    summary: [
-      `Market: ${marketSize.length} sources`,
-      `Competitors: ${competitors.length} sources`,
-      `Pain Points: ${painPoints.length} sources`,
-      `Trends: ${trends.length} sources`,
-      `Regulations: ${regulations.length} sources`,
-      `Unit Economics: ${unitEconomics.length} sources`,
-      `Total accepted: ${totalAccepted} | Rejected: ${rejectedSources.length} (quality filter)`,
-      staleSourceCount > 0 ? `⚠️ ${staleSourceCount} source(s) are >2 years old` : '',
-      freshPercentage < 50 ? `⚠️ LOW FRESHNESS — only ${freshPercentage}% of sources are recent` : '',
-      totalAccepted < 5 ? '⚠️ LOW DATA QUALITY — results may be unreliable for this geography/niche' : '',
-    ].filter(Boolean).join(' | '),
+    sourceAuthorityBreakdown: tiers,
+    summary: '',
   };
+
+  let summaryParts = [];
+  if (staleSourceCount > 0) summaryParts.push(`⚠️ ${staleSourceCount} source(s) are >2 years old.`);
+  if (freshPercentage < 50) summaryParts.push(`⚠️ LOW FRESHNESS — only ${freshPercentage}% of sources are recent.`);
+  if (totalAccepted < 5) summaryParts.push('⚠️ LOW DATA QUALITY — results may be unreliable for this geography/niche.');
+  if (!researchQuality.marketDataFound) summaryParts.push('Zero verified market size data found.');
+  if (!researchQuality.competitorDataFound) summaryParts.push('Zero competitor pricing or feature data found.');
+  if (!researchQuality.painPointDataFound) summaryParts.push('Zero verified buyer complaints or reviews found.');
+
+  // v4: Source Authority Warning
+  const totalTier3And4 = tiers.tier3 + tiers.tier4;
+  if (totalAccepted > 0 && (totalTier3And4 / totalAccepted) > 0.6) {
+    summaryParts.push('LOW_AUTHORITY_SOURCES: Over 60% of data is derived from low-tier sources (forums, unverified blogs). Treat numerical estimates with high skepticism.');
+  }
+
+  researchQuality.summary = summaryParts.length > 0 
+    ? summaryParts.join(' ') 
+    : 'Data coverage is strong across major required dimensions.';
 
   console.log(`[Orchestrator] Research quality: ${researchQuality.summary}`);
   

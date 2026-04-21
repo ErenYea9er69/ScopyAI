@@ -62,47 +62,48 @@ export async function searchGeneric(query: string, options?: any) {
 // -- Research Domains --
 
 export async function searchMarket(niche: string, geography: string) {
-  const query = `${niche} market size TAM SAM growth rate 2024 2025 in ${geography}`;
+  const query = `${niche} market size TAM SAM growth rate 2025 2026 in ${geography}`;
   const response = await tavilySearch(query, { includeAnswer: true, searchDepth: 'advanced', timeRange: 'year', topic: 'finance' });
   return { answer: response.answer, results: response.results };
 }
 
 export async function searchCompetitors(niche: string, geography?: string) {
   const geoClause = geography ? ` in ${geography}` : '';
-  const query = `${niche} alternatives vs competitors pricing reviews${geoClause}`;
-  const response = await tavilySearch(query, { maxResults: 7 });
+  const query = `${niche} alternatives vs competitors pricing reviews  2025 OR 2026${geoClause}`;
+  const response = await tavilySearch(query, { maxResults: 7, timeRange: 'year' });
   return { results: response.results };
 }
 
 export async function searchPainPoints(niche: string, sources: string[], geography?: string) {
   const domains = sources.length > 0 ? sources : ["reddit.com", "quora.com", "trustpilot.com"];
   const geoClause = geography ? ` in ${geography}` : '';
-  const query = `"frustrated with" OR "problem with" OR "hate" OR "complaints" ${niche}${geoClause}`;
+  const query = `"frustrated with" OR "problem with" OR "hate" OR "complaints" ${niche} after:2025${geoClause}`;
   
   const response = await tavilySearch(query, {
     includeDomains: domains,
     maxResults: 7,
     searchDepth: 'advanced',
+    timeRange: 'year'
   });
   return { results: response.results };
 }
 
 export async function searchTrends(keywords: string) {
-  const query = `${keywords} growing OR declining 2024 2025 market trend demand`;
+  const query = `${keywords} growing OR declining 2025 2026 market trend demand`;
   const response = await tavilySearch(query, { includeAnswer: true, maxResults: 5, timeRange: 'year', topic: 'news' });
   return { answer: response.answer, results: response.results };
 }
 
 export async function searchUnitEconomics(niche: string, geography?: string) {
   const geoClause = geography ? ` in ${geography}` : '';
-  const query = `${niche} customer acquisition cost CAC LTV pricing benchmark churn rate SaaS metrics${geoClause}`;
-  const response = await tavilySearch(query, { includeAnswer: true, maxResults: 5, searchDepth: 'advanced', topic: 'finance' });
+  const query = `${niche} customer acquisition cost CAC LTV pricing benchmark churn rate SaaS metrics 2025 OR 2026${geoClause}`;
+  const response = await tavilySearch(query, { includeAnswer: true, maxResults: 5, searchDepth: 'advanced', topic: 'finance', timeRange: 'year' });
   return { answer: response.answer, results: response.results };
 }
 
 export async function searchRegulations(niche: string, geography: string) {
-  const query = `${niche} legal regulations compliance risks in ${geography}`;
-  const response = await tavilySearch(query, { includeAnswer: true, maxResults: 3, includeRawContent: 'markdown' });
+  const query = `${niche} legal regulations compliance risks in ${geography} 2025 OR 2026`;
+  const response = await tavilySearch(query, { includeAnswer: true, maxResults: 3, includeRawContent: 'markdown', timeRange: 'year' });
   return { answer: response.answer, results: response.results };
 }
 

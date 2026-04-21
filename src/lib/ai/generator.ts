@@ -334,6 +334,11 @@ function buildBatch1Summary(layers: FullReport['layers']): string {
     parts.push(`[MARKET] Momentum: ${l2.marketMomentum?.direction || 'Unknown'} (Score: ${l2.marketMomentum?.velocityScore || 0}/100)`);
     parts.push(`[MARKET] Captured Ease: ${l2.capturedEase?.score || 0}/10 — ${l2.capturedEase?.reasoning || ''}`);
     parts.push(`[MARKET] Timing verdict: ${l2.marketTimingVerdict || 'Unknown'}`);
+    
+    // Explicit Constraint Flag
+    if (l2.tam?.confidence === 'low' && String(l2.tam?.range).toLowerCase().includes('insufficient')) {
+      parts.push(`⛔ LAYER 2 CONSTRAINT: TAM is unknown. All downstream market-size-dependent calculations are speculative.`);
+    }
   } else {
     parts.push(`[MARKET] ⚠️ Layer 2 FAILED — no market data available. Do NOT invent TAM/SAM numbers. Treat all market-dependent claims as confidence: "low".`);
   }
@@ -347,6 +352,11 @@ function buildBatch1Summary(layers: FullReport['layers']): string {
     parts.push(`[RISK] Red-Line Blockers: ${l3.redLineBlockers?.map(b => b.blocker).join('; ') || 'None'}`);
     parts.push(`[RISK] Execution difficulty: ${l3.executionDifficulty?.score || 0}/100`);
     parts.push(`[RISK] Gorilla competitors: ${l3.gorillaCompetitors?.map(g => g.name).join(', ') || 'None identified'}`);
+    
+    // Explicit Constraint Flag
+    if (l3.executionDifficulty && l3.executionDifficulty.score > 70) {
+      parts.push(`⛔ LAYER 3 CONSTRAINT: Execution difficulty is ${l3.executionDifficulty.score}/100. Downstream plans must account for severely limited execution capacity.`);
+    }
   } else {
     parts.push(`[RISK] ⚠️ Layer 3 FAILED — no risk data available. Assume HIGH risk as a precaution.`);
   }
@@ -370,9 +380,15 @@ function buildBatch2Summary(layers: FullReport['layers']): string {
   }
 
   if (layers.layer5) {
-    parts.push(`[ECONOMICS] Payback: ${layers.layer5.paybackPeriod?.months || '?'} months — ${layers.layer5.paybackPeriod?.verdict || ''}`);
-    parts.push(`[ECONOMICS] Margin: ${layers.layer5.grossMarginHealth?.marginPercentage || 0}% — AI COGS: ${layers.layer5.grossMarginHealth?.aiCogsEstimate || '?'}`);
-    parts.push(`[ECONOMICS] Optimal price: ${layers.layer5.optimalPricePoint?.price || '?'}`);
+    const l5 = layers.layer5;
+    parts.push(`[ECONOMICS] Payback: ${l5.paybackPeriod?.months || '?'} months — ${l5.paybackPeriod?.verdict || ''}`);
+    parts.push(`[ECONOMICS] Margin: ${l5.grossMarginHealth?.marginPercentage || 0}% — AI COGS: ${l5.grossMarginHealth?.aiCogsEstimate || '?'}`);
+    parts.push(`[ECONOMICS] Optimal price: ${l5.optimalPricePoint?.price || '?'}`);
+    
+    // Explicit Constraint Flag
+    if (l5.ltvCacVerdict?.verdict?.toLowerCase().includes('non-viable') || (l5.paybackPeriod && l5.paybackPeriod.months > 18)) {
+      parts.push(`⛔ LAYER 5 CONSTRAINT: Economics are non-viable. Layer 8 architectures must prioritize radical cost-cutting and bootstrap reality.`);
+    }
   }
 
   if (layers.layer6) {
@@ -610,7 +626,66 @@ function validateLayerConsistency(report: FullReport): void {
     }
   }
 
+  // === CHECK 3: Math & Localization Validation (v6) ===
+  sanitizeLayerOutput(report);
+
   console.log('[Validator] Post-generation validation complete.');
+}
+
+/**
+ * v6: Sanitizes layer output to prevent Chinese character leaks and
+ * invalid probability sums.
+ */
+function sanitizeLayerOutput(report: FullReport): void {
+  // Strip non-ASCII characters from layers
+  const sanitizeText = (obj: any): void => {
+    if (!obj || typeof obj !== 'object') return;
+    if (Array.isArray(obj)) {
+      obj.forEach(sanitizeText);
+      return;
+    }
+    for (const key of Object.keys(obj)) {
+      // Do not strip sources as they may legitimately contain foreign characters in the URL/title
+      if (key === 'source' || key === 'url' || key === 'quote' || key === 'notFound') continue;
+      
+      if (typeof obj[key] === 'string') {
+        // Strip non-ASCII except basic punctuation
+        obj[key] = obj[key].replace(/[^\x00-\x7F]/g, '').trim();
+      } else if (typeof obj[key] === 'object') {
+        sanitizeText(obj[key]);
+      }
+    }
+  };
+
+  for (const layer of Object.values(report.layers)) {
+    if (layer) sanitizeText(layer);
+  }
+
+  // Enforce Scenario Simulator 100% Probability Rule
+  if (report.layers.layer3?.scenarioSimulator) {
+    const scenarios = report.layers.layer3.scenarioSimulator;
+    let sum = 0;
+    const parsedProbs = scenarios.map((s: any) => {
+      // Extract number from strings like "30%" or "30"
+      const match = String(s.probability).match(/(\d+(\.\d+)?)/);
+      return match ? parseFloat(match[1]) : 0;
+    });
+
+    sum = parsedProbs.reduce((a: number, b: number) => a + b, 0);
+
+    if (sum > 100) {
+      console.warn(`[Validator] Scenario probabilities sum to ${sum}%. Normalizing to 100%.`);
+      scenarios.forEach((s: any, idx: number) => {
+        const normalized = Math.round((parsedProbs[idx] / sum) * 100);
+        s.probability = `${normalized}%`;
+      });
+      
+      if (!report.layers.layer3.notFound) report.layers.layer3.notFound = [];
+      report.layers.layer3.notFound.push(
+        `⚠️ MATH CORRECTION: Scenario probabilities originally summed to ${sum}%. They have been proportionally normalized to equal 100%.`
+      );
+    }
+  }
 }
 
 /**
