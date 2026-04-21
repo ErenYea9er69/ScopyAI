@@ -87,10 +87,22 @@ export async function generateReport(
 
     onProgress?.({ step: 'research', status: 'complete' });
 
-    // ===== STEP 1b: Pre-Report Complexity-Budget Mismatch Detection =====
-    const complexityWarning = detectComplexityBudgetMismatch(intake);
-    if (complexityWarning) {
-      console.warn(`[Generator] ${complexityWarning}`);
+    // ===== STEP 1b: Pre-Report Constraint Validation =====
+    const constraintWarning = validateConstraintCompatibility(intake);
+    if (constraintWarning) {
+      console.warn(`[Generator] CONSTRAINT WARNING: ${constraintWarning}`);
+      // Push this as a fatal flag immediately so it halts downstream generation
+      report.fatalFlags = [constraintWarning];
+      report.verdict = {
+        label: 'DO_NOT_PROCEED',
+        reason: 'Structurally Impossible Constraints',
+        recommendedAction: 'Pivot your business model or increase your budget significantly.',
+        primaryResearchRequirements: [],
+        topBlockers: [constraintWarning]
+      };
+      
+      // Still allow Layer 1-4 to generate so the user sees the data,
+      // but the verdict will block 5-8.
     }
 
     // ===== STEP 2: Persona Classification =====
@@ -193,8 +205,8 @@ export async function generateReport(
 
     // ===== STEP 4e: Build full context (inject complexity warning if present) =====
     let fullContext = batch1Context + '\n' + batch2Context;
-    if (complexityWarning) {
-      fullContext = `\n⚠️ COMPLEXITY-BUDGET MISMATCH: ${complexityWarning}\n` + fullContext;
+    if (constraintWarning) {
+      fullContext = `\n⚠️ CONSTRAINT MISMATCH: ${constraintWarning}\n` + fullContext;
     }
     await runLayer('layer8', async () => {
       const p = layer8Prompt(
@@ -751,23 +763,18 @@ function applyConfidenceGates(report: FullReport): void {
     suppression.gtmPlanSuppressed = true;
     suppression.moatStrategiesSuppressed = true;
     suppression.revenueProjectionsSuppressed = true;
-    reasons.push('VERDICT BLOCKED: DO_NOT_PROCEED. Structural impossibility or fatal blockers identified.');
+    reasons.push('VERDICT BLOCKED: DO_NOT_PROCEED. Execution layers removed from report.');
     
-    // Add fatal warning to the relevant layers
-    const fatalMsg = '🚫 FATAL BLOCKER WARNING: The adversarial audit concluded this project is unviable under your constraints. This execution plan is purely theoretical and should NOT be actioned. Do not invest capital.';
+    // HARD SUPPRESSION: Delete execution layers entirely.
+    // Keeping them creates cognitive dissonance (verdict says stop, but plans say go).
+    // Keep diagnostic layers (1-4) so the user understands WHY it failed.
+    delete report.layers.layer5; // Unit Economics — speculative without validated constraints
+    delete report.layers.layer6; // GTM — contradicts DO_NOT_PROCEED verdict
+    delete report.layers.layer7; // Moats — meaningless without market validation
     
-    if (report.layers.layer5) {
-      if (!report.layers.layer5.notFound) report.layers.layer5.notFound = [];
-      report.layers.layer5.notFound.unshift(fatalMsg);
-    }
-    if (report.layers.layer6) {
-      if (!report.layers.layer6.notFound) report.layers.layer6.notFound = [];
-      report.layers.layer6.notFound.unshift(fatalMsg);
-    }
-    if (report.layers.layer7) {
-      if (!report.layers.layer7.notFound) report.layers.layer7.notFound = [];
-      report.layers.layer7.notFound.unshift(fatalMsg);
-    }
+    report.executionLayersSuppressed = true;
+    
+    console.warn('[ConfidenceGates] HARD SUPPRESSION: Layers 5/6/7 deleted from DO_NOT_PROCEED report.');
   }
 
   // === Gate 1: GTM Plan requires validated buyer data ===
@@ -840,28 +847,35 @@ function applyConfidenceGates(report: FullReport): void {
 }
 
 /**
- * v5: Pre-report complexity-budget mismatch detection.
- * Scans niche description for complexity indicators and compares to budget.
+ * v6: Pre-report constraint validation.
+ * Scans niche description and user inputs for structurally impossible combinations.
  */
-function detectComplexityBudgetMismatch(intake: IntakeData): string | null {
-  const COMPLEXITY_KEYWORDS = [
-    'cgm', 'glucose', 'medical', 'clinical', 'diagnostic', 'fda', 'mhra',
-    'hardware', 'sensor', 'wearable', 'api integration', 'blockchain',
-    'hipaa', 'gdpr compliance', 'medical device', 'regulated',
-  ];
-
+function validateConstraintCompatibility(intake: IntakeData): string | null {
   const nicheLower = intake.niche.toLowerCase();
-  const matchedKeywords = COMPLEXITY_KEYWORDS.filter(kw => nicheLower.includes(kw));
-
-  if (matchedKeywords.length === 0) return null;
-
+  
   // Parse budget — extract numbers
   const budgetStr = intake.budget || '0';
   const budgetMatch = budgetStr.match(/[\d,]+/g);
   const budget = budgetMatch ? Math.max(...budgetMatch.map(b => parseFloat(b.replace(/,/g, '')))) : 0;
 
+  // 1. Regulatory/Hardware Complexity
+  const COMPLEXITY_KEYWORDS = [
+    'cgm', 'glucose', 'medical', 'clinical', 'diagnostic', 'fda', 'mhra',
+    'hardware', 'sensor', 'wearable', 'blockchain', 'hipaa', 'gdpr compliance', 
+    'medical device', 'regulated',
+  ];
+  const matchedKeywords = COMPLEXITY_KEYWORDS.filter(kw => nicheLower.includes(kw));
   if (budget < 20000 && matchedKeywords.length >= 1) {
-    return `Your idea contains complexity indicators (${matchedKeywords.join(', ')}) that typically require $50,000-$200,000+ to bring to market. Your stated budget is ${budgetStr}. The report will flag execution impossibility throughout.`;
+    return `STRUCTURALLY IMPOSSIBLE: Your idea contains complexity indicators (${matchedKeywords.join(', ')}) that typically require $50,000-$200,000+ to bring to market. Your stated budget is ${budgetStr}.`;
+  }
+
+  // 2. AI COGS + Consumer SaaS + Bootstrap
+  const AI_KEYWORDS = ['ai', 'llm', 'gpt', 'machine learning', 'code review', 'chatbot', 'generator'];
+  const hasAI = AI_KEYWORDS.some(kw => nicheLower.includes(kw));
+  const isConsumer = intake.buyerType?.toLowerCase().includes('consumer') || intake.buyerType?.toLowerCase() === 'b2c';
+  
+  if (hasAI && isConsumer && budget < 10000) {
+    return `STRUCTURALLY IMPOSSIBLE: B2C AI applications have high variable API costs ($2-7/user/month) and high consumer CAC ($20-50). A bootstrap budget of ${budgetStr} is mathematically incompatible with reaching profitability in this segment. You must either pivot to B2B or raise capital.`;
   }
 
   return null;

@@ -102,7 +102,18 @@ export async function generateStructuredOutput<T>(
       const cleanJson = content.replace(/```json/gi, '').replace(/```/g, '').trim();
       
       const parsed = JSON.parse(cleanJson);
-      return schema.parse(parsed);
+      const result = schema.parse(parsed);
+      
+      // === ZOMBIE DEFAULT DETECTOR ===
+      // Zod .default() silently fills missing fields with defaults.
+      // If the LLM returned an empty/malformed response, Zod will produce
+      // a result where ALL fields are defaults (empty strings, score: 50, etc.).
+      // This is the root cause of the "sham debate" bug (50/50/50 scores).
+      if (isZombieDefault(parsed)) {
+        throw new Error('ZOMBIE_DEFAULT: LLM returned empty/malformed JSON that was silently filled by Zod defaults. The response has no real content. Retrying with explicit schema guidance.');
+      }
+      
+      return result;
       
     } catch (error: any) {
       attempts++;
@@ -152,4 +163,46 @@ export async function streamThinkingResponse(
     temperature: 0.7,
     stream: true,
   });
+}
+
+/**
+ * Detects "zombie defaults" — objects where the LLM returned empty/malformed JSON
+ * and Zod silently filled everything with .default() values.
+ * 
+ * Heuristic: If >80% of string values in the top-level object are empty strings,
+ * and the object has fields like "score", "signal", "reasoning" (agent verdict pattern),
+ * it's almost certainly a zombie default from a failed parse.
+ */
+function isZombieDefault(parsed: any): boolean {
+  if (!parsed || typeof parsed !== 'object') return false;
+  
+  const keys = Object.keys(parsed);
+  if (keys.length === 0) return true; // completely empty
+  
+  let emptyStringCount = 0;
+  let totalStringFields = 0;
+  let hasDefaultScore = false;
+  
+  for (const key of keys) {
+    const val = parsed[key];
+    if (typeof val === 'string') {
+      totalStringFields++;
+      if (val === '') emptyStringCount++;
+    }
+    // Detect the specific agent verdict zombie pattern
+    if (key === 'score' && val === 50) hasDefaultScore = true;
+    if (key === 'reasoning' && val === '') hasDefaultScore = true;
+  }
+  
+  // Pattern 1: Agent verdict with default score + empty reasoning
+  if (hasDefaultScore && parsed.reasoning === '' && parsed.signal === 'GO') {
+    return true;
+  }
+  
+  // Pattern 2: >80% empty strings on an object with 3+ string fields
+  if (totalStringFields >= 3 && emptyStringCount / totalStringFields > 0.8) {
+    return true;
+  }
+  
+  return false;
 }

@@ -131,6 +131,25 @@ export function ReportHeader({ report, isShared = false }: ReportHeaderProps) {
           </ul>
         </div>
       )}
+      {/* ===== EXECUTION LAYERS SUPPRESSED BANNER ===== */}
+      {report.executionLayersSuppressed && (
+        <div className="rounded-xl p-5 mb-6 border border-red-500/30 bg-gradient-to-r from-red-500/8 to-red-900/5">
+          <div className="flex items-start gap-3">
+            <span className="text-[24px] leading-none shrink-0">{'\ud83d\uded1'}</span>
+            <div>
+              <p className="text-[13px] font-bold text-red-400 mb-1.5">Execution Layers Removed</p>
+              <p className="text-[12px] text-red-300/80 leading-relaxed mb-2">
+                Unit Economics (Layer 5), GTM Strategy (Layer 6), and Moat Analysis (Layer 7) have been
+                <strong> permanently removed</strong> from this report because the verdict is DO NOT PROCEED.
+                Generating execution plans for a non-viable idea is intellectually dishonest.
+              </p>
+              <p className="text-[11px] text-muted font-mono">
+                {'\u2192'} Review the Diagnostic Layers (1-4) to understand WHY this failed, then check the Pivot Section for alternatives.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ===== V5: CONTENT SUPPRESSION WARNINGS ===== */}
       {suppression && (suppression.gtmPlanSuppressed || suppression.moatStrategiesSuppressed || suppression.revenueProjectionsSuppressed) && (

@@ -43,7 +43,18 @@ AUDIT TASKS:
 Score opportunity 0–100. Signal: "GO" or "CAUTION".
 DATA INTEGRITY: Do NOT invent statistics. Cite [SOURCE: url] where possible.
 
-OUTPUT: Valid JSON matching report.ts/agentVerdictSchema.
+CRITICAL OUTPUT RULES:
+- Your "reasoning" field MUST be at least 100 characters of substantive analysis. Empty strings are REJECTED.
+- Your "keyPoints" array MUST have at least 3 items. Each item must be a specific, concrete claim.
+- Do NOT use the default score of 50. Commit to a real assessment.
+
+OUTPUT FORMAT: You MUST return ONLY this exact JSON structure:
+{
+  "score": <number 0-100>,
+  "signal": "GO" or "CAUTION",
+  "reasoning": "<detailed 2-3 sentence explanation of your score>",
+  "keyPoints": ["<specific point 1>", "<specific point 2>", "<specific point 3>"]
+}
 `.trim();
 
   const user = `
@@ -70,9 +81,21 @@ AUDIT & ATTACK TASKS:
 4. FAT-TAIL RISK: Imagine one specific "Black Swan" event (regulatory shift, platform lockout) that wipes this market in 90 days.
 
 Score risk 0–100 (100 = maximum danger). Signal: "KILL", "PIVOT", or "GO".
-DATA INTEGRITY: Absense of data is a red flag. Be ruthless.
+DATA INTEGRITY: Absence of data is a RED FLAG. Be ruthless. Missing data = higher risk score.
 
-OUTPUT: Valid JSON matching report.ts/agentVerdictSchema.
+CRITICAL OUTPUT RULES:
+- Your "reasoning" field MUST be at least 100 characters of substantive analysis. Empty strings are REJECTED.
+- Your "keyPoints" array MUST have at least 3 items. Each item must name a specific, concrete risk.
+- Do NOT use the default score of 50. If data is missing, score HIGHER (more dangerous), not neutral.
+- You MUST disagree with The Builder. If you cannot find risks, you are not trying hard enough.
+
+OUTPUT FORMAT: You MUST return ONLY this exact JSON structure:
+{
+  "score": <number 0-100>,
+  "signal": "KILL" or "PIVOT" or "GO",
+  "reasoning": "<detailed 2-3 sentence explanation of the biggest risks>",
+  "keyPoints": ["<specific risk 1>", "<specific risk 2>", "<specific risk 3>"]
+}
 `.trim();
 
   const user = `
@@ -103,6 +126,20 @@ EQUITY & BURN AUDIT:
 3. Is the "First 10" Playbook (Layer 6) actually achievable for a user at the ${userContext.stage} stage with these assets?
 
 Score difficulty 0–100 (100 = impossible). Signal: "EASY", "HARD", or "IMPOSSIBLE".
+
+CRITICAL OUTPUT RULES:
+- Your "reasoning" field MUST be at least 100 characters of substantive analysis. Empty strings are REJECTED.
+- Your "keyPoints" array MUST have at least 3 items. Each item must name a specific execution constraint.
+- Do NOT use the default score of 50. Evaluate the ACTUAL constraints honestly.
+- If budget is under $10k and the niche involves AI/ML API costs, score MUST be >= 70.
+
+OUTPUT FORMAT: You MUST return ONLY this exact JSON structure:
+{
+  "score": <number 0-100>,
+  "signal": "EASY" or "HARD" or "IMPOSSIBLE",
+  "reasoning": "<detailed 2-3 sentence explanation of execution feasibility>",
+  "keyPoints": ["<specific constraint 1>", "<specific constraint 2>", "<specific constraint 3>"]
+}
 `.trim();
 
   const user = `
@@ -180,11 +217,27 @@ export async function runTriAgentDebate(
 ): Promise<DebateResult> {
   console.log('[Debate] Running Parallel Agent Duel...');
 
-  const [builder, cynic, operator] = await Promise.all([
+  let [builder, cynic, operator] = await Promise.all([
     runBuilder(niche, research, layerSummary),
     runCynic(niche, research, layerSummary),
     runOperator(niche, research, userContext, layerSummary),
   ]);
+
+  // === GROUPTHINK DETECTION ===
+  // If all 3 agents agree within 10 points and all signal GO, the debate is useless.
+  // Force a re-run of the Cynic with an amplified adversarial prompt.
+  const scores = [builder.score, cynic.score, operator.score];
+  const spread = Math.max(...scores) - Math.min(...scores);
+  const allGo = builder.signal === 'GO' && (cynic.signal === 'GO' || cynic.signal === '') && (operator.signal === 'EASY' || operator.signal === 'GO' || operator.signal === '');
+  
+  if (spread <= 10 && allGo) {
+    console.warn(`[Debate] GROUPTHINK DETECTED: scores=[${scores.join(',')}], spread=${spread}. Re-running Cynic with amplified adversarial prompt.`);
+    try {
+      cynic = await runCynic(niche, research, layerSummary + '\n\nCRITICAL OVERRIDE: The Builder scored this idea very high. You MUST find at least 3 existential risks that could kill this business in 12 months. Missing competitor data, unvalidated TAM, and API cost dependency are all valid kill signals. Score MUST be at least 60.');
+    } catch (err) {
+      console.error('[Debate] Cynic re-run failed, using original:', err);
+    }
+  }
 
   const resolved = await resolveDebate(niche, builder, cynic, operator, userContext, layerSummary);
 

@@ -638,4 +638,5 @@ export interface FullReport {
   fatalFlags?: string[];
   layerReliability?: Record<string, LayerReliabilityScore>;
   contentSuppressed?: ContentSuppression;
+  executionLayersSuppressed?: boolean;
 }
