@@ -2,7 +2,7 @@ import OpenAI from 'openai';
 import { z } from 'zod';
 
 // LongCat API Configuration — reads from .env.local
-const baseURL = process.env.LONGCAT_BASE_URL || 'https://api.longcat.chat/v1';
+const baseURL = process.env.LONGCAT_BASE_URL || 'https://api.longcat.chat/openai/v1';
 
 const longCatKeys = [
   process.env.LONGCAT_API_KEY,
@@ -28,8 +28,8 @@ export const openai = openaiClients[0];
 
 // Model Constants — override via env if they change
 export const MODELS = {
-  REASONING: process.env.LONGCAT_MODEL_REASONING || 'google/gemini-2.5-flash',
-  ROUTER: process.env.LONGCAT_MODEL_ROUTER || 'google/gemini-2.5-flash',
+  REASONING: process.env.LONGCAT_MODEL_REASONING || 'LongCat-Flash-Thinking-2601',
+  ROUTER: process.env.LONGCAT_MODEL_ROUTER || 'LongCat-Flash-Lite',
 };
 
 console.log(`[LongCat] Configured: baseURL=${baseURL}, reasoning=${MODELS.REASONING}, router=${MODELS.ROUTER}`);

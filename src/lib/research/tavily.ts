@@ -150,7 +150,7 @@ export async function extractPage(url: string, niche?: string) {
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
       return await tvlyClients[clientIndex].extract([url], {
-        ...(niche ? { query: `${niche} pricing features customers reviews` } : {}),
+        // extract API doesn't support 'query', only 'extractDepth', 'includeImages' etc.
       });
     } catch (error) {
       console.warn(`[Tavily Extract] Failed for ${url} using key index ${clientIndex}`);
