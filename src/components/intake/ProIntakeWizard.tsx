@@ -96,6 +96,7 @@ export function ProIntakeWizard() {
     buyerType: '',
     revenueModel: '',
     whyNow: '',
+    researchObjectives: [] as string[],
     _hp: '',
   });
 
@@ -108,10 +109,10 @@ export function ProIntakeWizard() {
   if (form.urls.length > 5) filledFields++;
   if (form.uniqueInsight.length > 10) filledFields++;
 
-  const totalCore = 7;
+  const totalCore = 8;
   const progressPercent = Math.min(100, Math.max(8, (filledFields / totalCore) * 100));
 
-  const toggleArray = (field: 'assets' | 'sources' | 'fit', value: string) => {
+  const toggleArray = (field: 'assets' | 'sources' | 'fit' | 'researchObjectives', value: string) => {
     setForm(prev => {
       const arr = prev[field];
       return { ...prev, [field]: arr.includes(value) ? arr.filter(v => v !== value) : [...arr, value] };
@@ -119,6 +120,29 @@ export function ProIntakeWizard() {
   };
 
   const [isGenerating, setIsGenerating] = useState(false);
+
+  const autoFill = () => {
+    setForm(prev => ({
+      ...prev,
+      niche: 'AI-powered code review assistant for open-source React maintainers',
+      geo: 'Global',
+      stage: 'Pre-Product',
+      budget: 'Bootstrap (<$5k)',
+      time: 'Part-time (10-20 hrs/wk)',
+      timeline: '3 Months',
+      assets: ['Technical skills', 'Industry network'],
+      urls: 'cursor.com, copilot.github.com, codium.ai',
+      sources: ['GitHub Issues', 'X / Twitter', 'Reddit'],
+      fit: ['I have a technical advantage (can build the product myself)', "I've worked in this industry professionally for 2+ years"],
+      uniqueInsight: 'Maintainers spend 60% of their time reviewing stylistic nitpicks rather than logic flaws, leading to burnout.',
+      acquisitionChannel: 'SEO / Content',
+      buyerType: 'Consumers (B2C)',
+      revenueModel: 'SaaS / Subscription',
+      whyNow: 'LLMs finally have enough context window to read entire repos.',
+      researchObjectives: ['Go/No-Go Decision', 'Feature Prioritization'],
+    }));
+    setGeoFilter('Global');
+  };
 
   const handleNext = async () => {
     if (step < 3) {
@@ -153,6 +177,7 @@ export function ProIntakeWizard() {
           buyerType: form.buyerType,
           revenueModel: form.revenueModel,
           whyNow: form.whyNow,
+          researchObjectives: form.researchObjectives,
         }),
       });
 
@@ -189,7 +214,15 @@ export function ProIntakeWizard() {
               <p className="text-[12px] text-muted mt-0.5">More context = exponentially sharper analysis</p>
             </div>
           </div>
-          <span className="font-mono text-[11px] text-muted">{filledFields} / {totalCore} core fields</span>
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-[11px] text-muted">{filledFields} / {totalCore} core fields</span>
+            <button 
+              onClick={autoFill}
+              className="text-[10px] font-mono text-accent bg-accent/10 border border-accent/20 px-2 py-1 rounded hover:bg-accent/20 transition-colors"
+            >
+              [ AUTO-FILL TEST DATA ]
+            </button>
+          </div>
         </div>
 
         {/* Step Tabs */}
@@ -372,6 +405,20 @@ export function ProIntakeWizard() {
                   Why now? <span className="font-normal text-muted text-[11px] font-mono">— what changed that makes this the right moment?</span>
                 </label>
                 <input type="text" className="bg-surface-2 border border-border-accent rounded-[12px] p-2.5 px-3.5 text-text text-[14px] outline-none w-full focus:border-accent/40 focus:bg-surface-3" placeholder="e.g. New regulation, competitor shut down, AI made it possible..." value={form.whyNow} onChange={e => setForm({...form, whyNow: e.target.value})} />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[12px] font-medium text-muted-2 tracking-[0.03em] flex items-center gap-1.5">Research Objectives <span className="font-normal text-muted text-[11px] font-mono">— what decision are you trying to make?</span></label>
+                <div className="flex flex-wrap gap-[7px]">
+                  {["Go/No-Go Decision", "Pricing Optimization", "Feature Prioritization", "Competitive Benchmarking", "Pivot Exploration", "Build vs Buy Analysis"].map(opt => (
+                    <span
+                      key={opt} onClick={() => toggleArray('researchObjectives', opt)}
+                      className={cn("bg-surface-2 border border-border-accent rounded-lg py-1.5 px-3 text-[13px] text-muted-2 cursor-pointer transition-all select-none hover:border-border-accent hover:text-text", form.researchObjectives.includes(opt) && "bg-accent/10 border-accent/40 text-accent")}
+                    >
+                      {opt}
+                    </span>
+                  ))}
+                </div>
               </div>
 
               <div className="flex flex-col gap-1.5">

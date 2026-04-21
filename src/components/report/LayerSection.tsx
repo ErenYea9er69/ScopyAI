@@ -142,6 +142,55 @@ function renderLayerContent(data: any, showSources: boolean) {
       continue;
     }
 
+    if (key === 'ltvCacVerdict' && typeof value === 'object') {
+      const v = value as any;
+      const isBad = v.ratio?.includes('< 3') || v.ratio?.startsWith('1:') || v.ratio?.startsWith('2:');
+      elements.push(
+        <div key={key} className="mb-4 bg-surface-2 border border-border rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[11px] text-muted font-mono uppercase tracking-wider">LTV:CAC Health</span>
+            <span className={cn("text-[14px] font-bold font-mono px-2.5 py-1 rounded-md", isBad ? "bg-red-500/10 text-red-500" : "bg-green-500/10 text-green-500")}>
+              {v.ratio || 'N/A'}
+            </span>
+          </div>
+          <div className="flex w-full h-2 rounded-full overflow-hidden mb-3 bg-surface-3">
+             <div className="h-full bg-brand-red w-1/4"></div>
+             <div className="h-full bg-yellow-500 w-1/4"></div>
+             <div className="h-full bg-green-500 w-2/4"></div>
+          </div>
+          <p className="text-[12px] text-muted-2 leading-relaxed">{v.verdict}</p>
+        </div>
+      );
+      continue;
+    }
+
+    if (key === 'cacBenchmark' && typeof value === 'object') {
+      const v = value as any;
+      elements.push(
+        <div key={key} className="mb-4 bg-surface-2 border border-border rounded-xl p-4">
+           <div className="flex justify-between items-start mb-3">
+              <div>
+                <span className="text-[11px] text-muted font-mono uppercase tracking-wider block mb-1">CAC Benchmark</span>
+                <span className="text-[16px] font-bold text-text">{v.range}</span>
+              </div>
+              {v.confidence && confidenceBadge(v.confidence as ConfidenceLevel)}
+           </div>
+           {v.channelBreakdown && v.channelBreakdown.length > 0 && (
+             <div className="space-y-2 mt-3 pt-3 border-t border-border/50">
+               <span className="text-[10px] text-muted uppercase font-mono mb-1 block">Channel Breakdown</span>
+               {v.channelBreakdown.map((cb: any, i: number) => (
+                 <div key={i} className="flex justify-between items-center text-[12px]">
+                   <span className="text-muted-2">{cb.channel}</span>
+                   <span className="font-mono text-accent">{cb.estCAC}</span>
+                 </div>
+               ))}
+             </div>
+           )}
+        </div>
+      );
+      continue;
+    }
+
     if (typeof value === 'string' && (key.toLowerCase().includes('payback') || key.toLowerCase().includes('time') || key.toLowerCase().includes('budget'))) {
       elements.push(
         <div key={key} className="flex items-center justify-between bg-accent/5 border border-accent/20 rounded-[10px] p-3 mb-3">

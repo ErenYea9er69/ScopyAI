@@ -16,6 +16,7 @@ export const intakeSchema = z.object({
   buyerType: z.string().default(''),
   revenueModel: z.string().default(''),
   whyNow: z.string().default(''),
+  researchObjectives: z.array(z.string()).default([]),
 });
 
 export type IntakeInput = z.infer<typeof intakeSchema>;

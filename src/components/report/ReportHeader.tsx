@@ -72,6 +72,44 @@ export function ReportHeader({ report, isShared = false }: ReportHeaderProps) {
                 <p className="text-[11px] font-mono text-muted uppercase tracking-wider mb-1">Recommended Action</p>
                 <p className="text-[13px] font-medium" style={{ color: verdictStyle.color }}>{verdict.recommendedAction}</p>
               </div>
+
+              {verdict.primaryResearchRequirements && verdict.primaryResearchRequirements.length > 0 && (
+                <div className="pt-3 border-t mt-3" style={{ borderColor: verdictStyle.border }}>
+                  <p className="text-[11px] font-mono text-muted uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <span>🔬</span> Primary Validation Required
+                  </p>
+                  <ul className="space-y-1">
+                    {verdict.primaryResearchRequirements.map((req, i) => (
+                      <li key={i} className="text-[13px] text-text/80 flex items-start gap-2">
+                        <span className="text-[10px] mt-1 shrink-0 text-muted-2">{(i + 1).toString().padStart(2, '0')}.</span>
+                        <span className="line-clamp-2">{req}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {verdict.assumptionsLog && verdict.assumptionsLog.length > 0 && (
+                <div className="pt-3 border-t mt-3" style={{ borderColor: verdictStyle.border }}>
+                  <p className="text-[11px] font-mono text-muted uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <span>💭</span> Unverified Assumptions Log
+                  </p>
+                  <ul className="space-y-3">
+                    {verdict.assumptionsLog.map((log, i) => (
+                      <li key={i} className="text-[13px] text-text/80">
+                        <div className="flex items-start gap-2 mb-1">
+                          <span className="text-[10px] mt-1 shrink-0 text-yellow-500">⚠</span>
+                          <span className="font-medium text-text">{log.assumption}</span>
+                        </div>
+                        <div className="pl-5 space-y-1">
+                          <p className="text-[12px]"><span className="text-muted">Impact if wrong:</span> {log.impactIfWrong}</p>
+                          <p className="text-[12px]"><span className="text-muted">Validation:</span> {log.validationExperiment}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
         </div>

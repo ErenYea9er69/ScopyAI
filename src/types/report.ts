@@ -331,6 +331,7 @@ export const layer4Schema = z.object({
       z.enum(['primary', 'secondary'])
     ).catch('secondary'),
   })).default([]),
+  missingCompetitors: z.array(z.string()).optional().default([]),
   failedCompetitors: z.array(failedCompetitorSchema).optional().default([]),
   marketGaps: z.array(citedClaim).default([]),
   seoWhiteSpace: z.array(z.object({ keyword: z.string().default(''), difficulty: z.string().default(''), opportunity: z.string().default('') })).default([]),
@@ -342,6 +343,7 @@ export const layer4Schema = z.object({
   userCompetitorVerdict: [],
   competitors: [],
   differentiationVectors: [],
+  missingCompetitors: [],
   failedCompetitors: [],
   marketGaps: [],
   seoWhiteSpace: [],
@@ -485,12 +487,19 @@ export const layer7Schema = z.object({
     frictionFactors: z.array(z.string()).default([]),
     verdict: z.string().default(''),
   }).default({ score: 0, frictionFactors: [], verdict: '' }),
+  swotAnalysis: z.object({
+    strengths: z.array(z.string()).default([]),
+    weaknesses: z.array(z.string()).default([]),
+    opportunities: z.array(z.string()).default([]),
+    threats: z.array(z.string()).default([]),
+  }).default({ strengths: [], weaknesses: [], opportunities: [], threats: [] }),
   notFound: z.array(z.string()).default([]),
 }).default({
   counterPositioning: [],
   moats: [],
   moatFlywheel: [],
   migrationFrictionScore: { score: 0, frictionFactors: [], verdict: '' },
+  swotAnalysis: { strengths: [], weaknesses: [], opportunities: [], threats: [] },
   notFound: []
 });
 export type Layer7 = z.infer<typeof layer7Schema>;
@@ -532,6 +541,12 @@ export const debateResultSchema = z.object({
     condition: z.string().default(''),
     action: z.string().default(''),
   })).default([]),
+  primaryResearchRequirements: z.array(z.string()).optional().default([]),
+  assumptionsLog: z.array(z.object({
+    assumption: z.string().default(''),
+    impactIfWrong: z.string().default(''),
+    validationExperiment: z.string().default('')
+  })).optional().default([]),
   contradictoryCertainty: z.boolean().optional().default(false),
 }).default({
   builder: { score: 50, signal: 'GO', reasoning: '', keyPoints: [] },
@@ -541,6 +556,8 @@ export const debateResultSchema = z.object({
   compositeScore: 50,
   clashPoints: [],
   milestones: [],
+  primaryResearchRequirements: [],
+  assumptionsLog: [],
   contradictoryCertainty: false,
 });
 export type DebateResult = z.infer<typeof debateResultSchema>;
@@ -578,6 +595,8 @@ export interface ReportVerdict {
   reason: string;
   topBlockers: string[];
   recommendedAction: string;
+  primaryResearchRequirements?: string[];
+  assumptionsLog?: { assumption: string; impactIfWrong: string; validationExperiment: string }[];
 }
 
 export interface LayerReliabilityScore {

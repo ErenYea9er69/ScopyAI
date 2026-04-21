@@ -48,6 +48,7 @@ DATA INTEGRITY RULES — YOU MUST FOLLOW THESE:
 5. It is ALWAYS better to say "Insufficient data to estimate" than to fabricate a number.
 6. Do NOT invent competitor revenue, traffic, or market share figures. If a competitor's revenue is not in the research data, say "Revenue: Not publicly available".
 7. Do NOT invent URLs or source citations. Only cite sources that appear in the [SOURCE: ...] tags above.
+8. SECONDARY RESEARCH CONFIDENCE CAP (CRITICAL): Because all provided data is from secondary web sources (Reddit, Hacker News, Articles), you MUST NOT use "high" confidence for willingness-to-pay, precise pricing thresholds, or behavioral pain points. These MUST be capped at "medium" confidence. "High" confidence is reserved ONLY for hard facts (e.g., a competitor's explicit pricing page, a direct regulatory document like FDA 510(k)).
 8. If a competitor is tagged [⚠️ DEFUNCT], you MUST NOT cite it as an active competitor. Instead, analyze WHY it failed and what that failure means for the user's idea. A dead well-funded competitor is a WARNING SIGN, not a market gap. Include it in the failedCompetitors array if applicable.
 9. Sources tagged [AGE: 2023] or older are STALE. Do not use them as primary evidence for current market conditions. If they are the ONLY sources available, explicitly state "Based on data from [year] — current conditions may differ significantly" and set confidence to "low".
 10. For rapidly evolving markets (AI, crypto, social media, health tech), sources older than 12 months should be treated with extreme caution and flagged in the notFound array as a limitation.
@@ -301,7 +302,7 @@ REGULATORY COST REALITY CHECK (REMINDER):
 
 // ========== LAYER 4 — COMPETITOR INTELLIGENCE ==========
 
-export function layer4Prompt(niche: string, research: { competitors: string[] }, userUrls: string[] = [], batch1Context: string = '') {
+export function layer4Prompt(niche: string, research: { competitors: string[] }, userUrls: string[] = [], unscrapedUrls: string[] = [], batch1Context: string = '') {
   const system = `
 You are the Competitor Intelligence module.
 Your job is to map the battlefield, audit incumbent moats, identify attack vectors, and track failed precursors.
@@ -313,6 +314,7 @@ OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers)
   "userCompetitorVerdict": [ { "url": "string", "threatLevel": "high|medium|low", "verdict": "string" } ],
   "competitors": [ { "name": "string", "url": "string", "revenue": "string", "traffic": "string", "primaryMarketingPillar": "string", "pricing": "string", "pricingAnchors": ["string"], "moatAudit": ["string"], "strengths": ["string"], "weaknesses": ["string"] } ],
   "differentiationVectors": [ { "vector": "string", "howToWin": "string", "priority": "primary|secondary" } ],
+  "missingCompetitors": ["string"],
   "failedCompetitors": [ { "name": "string", "shutdownDate": "string", "funding": "string", "reason": "string", "lesson": "string" } ],
   "marketGaps": [ { "claim": "string", "source": "string", "confidence": "high|medium|low" } ],
   "seoWhiteSpace": [ { "keyword": "string", "difficulty": "string", "opportunity": "string" } ],
@@ -326,6 +328,7 @@ OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers)
   const user = `
 NICHE: ${niche}
 USER-PROVIDED COMPETITORS: ${userUrls.length > 0 ? userUrls.join(', ') : 'None provided'}
+UNSCRAPED COMPETITORS: ${unscrapedUrls.length > 0 ? unscrapedUrls.join(', ') : 'None'}
 
 ${batch1Context}
 
@@ -354,6 +357,12 @@ MARKETING PILLAR TEARDOWN:
 
 PRICING ANCHORS:
 - Identify the specific features that act as "gates" for the jump from mid-tier to high-tier pricing (e.g., "SSO/SAML" or "API usage limits").
+
+MISSING COMPETITOR RULES (CRITICAL FOR INTEGRITY):
+- If there are URLs in UNSCRAPED COMPETITORS, you MUST:
+  1. Add them to the "missingCompetitors" array.
+  2. If >50% of the USER-PROVIDED COMPETITORS are missing/unscraped, you MUST add a FATAL-level warning to the "notFound" array stating: "FATAL: Intellectual Fraud Risk. Insufficient data to build a complete competitive strategy. Differentiation vectors are based on an incomplete market picture."
+  3. DO NOT invent moats or pricing for missing competitors.
 
 DEFUNCT COMPETITOR RULES:
 - If ANY competitor entry is prefixed with [⚠️ DEFUNCT], you MUST:
@@ -529,8 +538,10 @@ CONVERSION RATE REALITY ANCHORING:
   * Landing Page conversion: 2-3%
   * Paid Ad CTR: 1-1.5%
 
-GTM TOTAL SPEND CAP:
+GTM TOTAL SPEND CAP & CONSTRAINT ENFORCEMENT (CRITICAL):
 - The total cost across all phases MUST NOT exceed the user budget: ${userContext.budget}.
+- If you suggest a tactic (e.g., "$1,200 executive dinners" or "LinkedIn Ads") that exceeds the budget or makes the math impossible, you fail the validation.
+- BAN ON GENERIC TEMPLATES: Do NOT suggest standard startup tropes ("host dinners", "cold email", "LinkedIn outbound") UNLESS the research explicitly proves this specific audience engages with those channels. If no data exists, you must state: "Insufficient data to recommend specific channel."
 `.trim();
 
   return { system, user };
@@ -556,6 +567,7 @@ OUTPUT FORMAT: Valid JSON exactly matching this structure (no markdown wrappers)
   "moats": [ { "type": "string", "strategy": "string", "implementation": "string", "decayRisk": "high|medium|low", "aiResilience": "string", "confidence": "high|medium|low" } ],
   "moatFlywheel": [ { "phase": "string", "moatFocus": "string", "howItScales": "string" } ],
   "migrationFrictionScore": { "score": 0, "frictionFactors": ["string"], "verdict": "string" },
+  "swotAnalysis": { "strengths": ["string"], "weaknesses": ["string"], "opportunities": ["string"], "threats": ["string"] },
   "notFound": ["string"]
 }
 `.trim();
@@ -597,6 +609,13 @@ MIGRATION FRICTION:
 SWITCHING COST ETHICS:
 - Valid switching costs: Personalized baselines, community, integration depth.
 - INVALID switching costs: Data hostage-taking, proprietary data lock-in, poor export formats.
+
+SWOT ANALYSIS (CONSTRAINT-AWARE):
+- Generate a comprehensive Strengths, Weaknesses, Opportunities, and Threats matrix.
+- Strengths: Must be based on the USER ASSETS and UNIQUE INSIGHT provided.
+- Weaknesses: Must explicitly reflect the USER BUDGET and TIME constraints relative to market demands.
+- Opportunities: Highlight market gaps where incumbents are failing (from pain points).
+- Threats: Identify regulatory blockers, substitute products, or high-funded competitors that could instantly obsolete this idea.
 `.trim();
 
   return { system, user };
@@ -606,7 +625,7 @@ SWITCHING COST ETHICS:
 
 const PERSONA_MODULE_BANK: Record<Archetype, string[]> = {
   dev: [
-    'Technical Build vs Buy (Labor vs API Cost Audit)',
+    'Technical Architecture Assessment (Infrastructure Cost & Stack)',
     'Obsolescence Pivot Plan (Technical Sherlock Defense)',
     'API & Dependency Risk Teardown',
     'GitHub / OSS Competition Scan',
@@ -675,6 +694,11 @@ ${bank.map((m, i) => `${i + 1}. ${m}`).join('\n')}
 Based on the research and earlier layer conclusions, SELECT the 5 most high-impact, relevant modules.
 For example, if the research shows high competitor saturation, select "Counter-Messaging." If there is high platform risk, select "Sherlock Defense."
 Do NOT just pick the first 5. Prioritise intelligence that addresses a specific gap or risk found in Layers 1-7.
+
+ARCHITECTURAL MANDATE: If you select "Technical Architecture Assessment", the content MUST explicitly include:
+- A recommended tech stack.
+- Infrastructure cost estimates at 10, 100, and 1000 daily active users (DAU).
+- Data pipeline architecture and latency constraints.
 
 Each module must include: title, content (deep strategic analysis), confidence level, and source citations.
 

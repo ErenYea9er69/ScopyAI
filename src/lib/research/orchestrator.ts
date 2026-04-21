@@ -53,6 +53,7 @@ export type ResearchData = {
     freshSourcePercentage: number;
     summary: string;
   };
+  unscrapedCompetitorUrls?: string[];
 };
 
 // ========== SOURCE QUALITY SCORING v3 ==========
@@ -459,19 +460,31 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
     console.log(`[Orchestrator] Adversarial re-search complete. Found ${allReResults.length} new signals.`);
   }
 
+  const targetCompetitorUrls = (intake.competitorUrls || []).filter(u => u.trim());
   const competitorExtractions = await Promise.all(
-    (intake.competitorUrls || []).filter(u => u.trim()).map(url => tavily.extractPage(url, intake.niche))
+    targetCompetitorUrls.map(async url => {
+      try {
+        const res = await tavily.extractPage(url, intake.niche);
+        return { url, res };
+      } catch (e) {
+        return { url, res: null };
+      }
+    })
   );
 
+  const unscrapedCompetitorUrls: string[] = [];
   const extractedCompetitorsContext = competitorExtractions
     .filter(Boolean)
-    .flatMap((ex: any) => {
-      // Tavily Extract SDK returns a results array, but each item might be the raw content directly or another nested object
-      const rawResults = Array.isArray(ex?.results) ? ex.results : [];
+    .flatMap(({ url, res }: any) => {
+      const rawResults = Array.isArray(res?.results) ? res.results : [];
+      if (rawResults.length === 0) {
+        unscrapedCompetitorUrls.push(url);
+        return [];
+      }
       return rawResults.map((r: any) => {
-        const url = r?.url || 'user-provided';
         const title = r?.title || '';
         const content = String(r?.rawContent || r?.content || r?.markdown || '').slice(0, 10000);
+        if (content.length < 50) unscrapedCompetitorUrls.push(url); // Count as failed if barely any content
         return `[SOURCE: ${url} | ${title}] ${content}`;
       });
     });
@@ -688,5 +701,6 @@ export async function gatherIntelligence(intake: IntakeData): Promise<ResearchDa
     sources: finalizedSources,
     rejectedSources,
     researchQuality,
+    unscrapedCompetitorUrls: Array.from(new Set(unscrapedCompetitorUrls)),
   };
 }

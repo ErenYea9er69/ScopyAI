@@ -50,6 +50,7 @@ export type IntakeData = {
   buyerType: string;
   revenueModel: string;
   whyNow: string;
+  researchObjectives?: string[];
 };
 
 type ProgressCallback = (update: {
@@ -125,6 +126,7 @@ export async function generateReport(
       buyerType: intake.buyerType,
       revenueModel: intake.revenueModel,
       whyNow: intake.whyNow,
+      researchObjectives: intake.researchObjectives,
     };
 
     // --- Batch 1: Layers 1, 2, 3 (parallel) ---
@@ -154,7 +156,7 @@ export async function generateReport(
     // --- Batch 2: Layers 4, 5, 6, 7 (parallel, with Batch 1 context) ---
     const [l4, l5, l6, l7] = await Promise.allSettled([
       runLayer('layer4', () => {
-        const p = layer4Prompt(intake.niche, research, intake.competitorUrls, batch1Context);
+        const p = layer4Prompt(intake.niche, research, intake.competitorUrls, research.unscrapedCompetitorUrls, batch1Context);
         return generateStructuredOutput(p.system, p.user, layer4Schema, MODELS.REASONING);
       }, onProgress),
       runLayer('layer5', () => {
@@ -685,18 +687,23 @@ function generateVerdict(report: FullReport): void {
   let reason: string;
   let recommendedAction: string;
 
-  // 1. FATAL FAILURES (Operator IMPOSSIBLE or Cynic KILL)
-  if (operator.score >= 85 || operatorSignal.includes('IMPOSSIBLE') || cynicSignal.includes('KILL') || compositeScore < 30) {
+  // 1. FATAL FAILURES (Operator IMPOSSIBLE, Cynic KILL, or Any Fatal Flags)
+  if (operator.score >= 85 || operatorSignal.includes('IMPOSSIBLE') || cynicSignal.includes('KILL') || compositeScore < 30 || fatalCount > 0) {
     label = 'DO_NOT_PROCEED';
-    reason = operator.score >= 85 
-      ? `EXECUTION BARRIER: Rated IMPOSSIBLE (${operator.score}/100). The current burn-rate/timeline is incompatible with your budget.` 
-      : `STRATEGIC FAILURE: The adversarial audit found fundamental viability gaps. ${cynic.reasoning.substring(0, 150)}...`;
+    
+    if (fatalCount > 0) {
+      reason = `STRUCTURAL IMPOSSIBILITY: Identified ${fatalCount} fatal blockers that violate your constraints (budget, timeline, or regulations).`;
+    } else if (operator.score >= 85) {
+      reason = `EXECUTION BARRIER: Rated IMPOSSIBLE (${operator.score}/100). The current burn-rate/timeline is incompatible with your budget.`;
+    } else {
+      reason = `STRATEGIC FAILURE: The adversarial audit found fundamental viability gaps. ${cynic.reasoning.substring(0, 150)}...`;
+    }
     
     recommendedAction = milestones.find(m => m.condition.includes('KILL'))?.action 
-      || 'Review the Cynic analysis and pivot immediately. Do not invest capital into this current formulation.';
+      || 'Review the fatal blockers below. You MUST pivot your approach, increase your budget, or abandon this specific iteration.';
   } 
   // 2. CAUTIONARY / DIRECTIONAL
-  else if (compositeScore <= 60 || operator.score >= 65 || fatalCount >= 2) {
+  else if (compositeScore <= 60 || operator.score >= 65) {
     label = 'PROCEED_WITH_CAUTION';
     reason = `DIRECTIONAL ONLY: Composite score ${compositeScore}/100. Significant execution risks or data gaps identified.`;
     recommendedAction = milestones.find(m => m.condition.includes('PIVOT'))?.action 
@@ -719,7 +726,10 @@ function generateVerdict(report: FullReport): void {
     }
   }
 
-  report.verdict = { label, reason, topBlockers, recommendedAction };
+  const primaryResearchRequirements = report.debate?.primaryResearchRequirements || [];
+  const assumptionsLog = report.debate?.assumptionsLog || [];
+
+  report.verdict = { label, reason, topBlockers, recommendedAction, primaryResearchRequirements, assumptionsLog };
 }
 
 /**
@@ -735,6 +745,30 @@ function applyConfidenceGates(report: FullReport): void {
   };
 
   const reasons: string[] = [];
+
+  // === Gate 0: Fatal Verdict (DO_NOT_PROCEED) ===
+  if (report.verdict?.label === 'DO_NOT_PROCEED') {
+    suppression.gtmPlanSuppressed = true;
+    suppression.moatStrategiesSuppressed = true;
+    suppression.revenueProjectionsSuppressed = true;
+    reasons.push('VERDICT BLOCKED: DO_NOT_PROCEED. Structural impossibility or fatal blockers identified.');
+    
+    // Add fatal warning to the relevant layers
+    const fatalMsg = '🚫 FATAL BLOCKER WARNING: The adversarial audit concluded this project is unviable under your constraints. This execution plan is purely theoretical and should NOT be actioned. Do not invest capital.';
+    
+    if (report.layers.layer5) {
+      if (!report.layers.layer5.notFound) report.layers.layer5.notFound = [];
+      report.layers.layer5.notFound.unshift(fatalMsg);
+    }
+    if (report.layers.layer6) {
+      if (!report.layers.layer6.notFound) report.layers.layer6.notFound = [];
+      report.layers.layer6.notFound.unshift(fatalMsg);
+    }
+    if (report.layers.layer7) {
+      if (!report.layers.layer7.notFound) report.layers.layer7.notFound = [];
+      report.layers.layer7.notFound.unshift(fatalMsg);
+    }
+  }
 
   // === Gate 1: GTM Plan requires validated buyer data ===
   if (report.layers.layer1) {

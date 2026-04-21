@@ -124,6 +124,7 @@ async function resolveDebate(
   builder: AgentVerdict,
   cynic: AgentVerdict,
   operator: AgentVerdict,
+  userContext: { researchObjectives?: string[] },
   layerSummary: string = ''
 ) {
   const system = `
@@ -142,6 +143,14 @@ Synthesize a sequence of if-then path:
 - PIVOT IF: [Trigger event] -> [Alternative path]
 - KILL IF: [Warning sign] -> [Exit strategy]
 
+PRIMARY RESEARCH REQUIREMENTS (CRITICAL):
+The user MUST not blindly execute this report without primary validation.
+Generate 2-3 specific primary research actions the user MUST take before spending capital (e.g., "Run a Van Westendorp pricing survey with 50 executives", "Interview 5 compliance officers").
+
+ASSUMPTIONS LOG:
+Identify the biggest unverified leaps in logic the report has made.
+List these assumptions, the impact if they are wrong, and the specific validation experiment needed to prove/disprove them.
+
 OUTPUT: Valid JSON matching report.ts/debateResultSchema.
 `.trim();
 
@@ -154,6 +163,8 @@ CYNIC: ${cynic.score}/100 - ${cynic.signal}. Reasoning: ${cynic.reasoning}
 OPERATOR: ${operator.score}/100 - ${operator.signal}. Reasoning: ${operator.reasoning}
 
 Weigh the perspectives and resolve the duel.
+Evaluate the debate in the context of the user's specific Research Objectives:
+${userContext.researchObjectives?.length ? userContext.researchObjectives.join(', ') : 'None specified'}
 `.trim();
 
   return generateStructuredOutput(system, user, debateResultSchema, MODELS.REASONING);
@@ -164,7 +175,7 @@ Weigh the perspectives and resolve the duel.
 export async function runTriAgentDebate(
   niche: string,
   research: ResearchData,
-  userContext: { budget: string; time: string; assets: string[]; stage: string; founderFit?: string[]; acquisitionChannel?: string; revenueModel?: string },
+  userContext: { budget: string; time: string; assets: string[]; stage: string; founderFit?: string[]; acquisitionChannel?: string; revenueModel?: string; researchObjectives?: string[] },
   layerSummary: string = ''
 ): Promise<DebateResult> {
   console.log('[Debate] Running Parallel Agent Duel...');
@@ -175,7 +186,7 @@ export async function runTriAgentDebate(
     runOperator(niche, research, userContext, layerSummary),
   ]);
 
-  const resolved = await resolveDebate(niche, builder, cynic, operator, layerSummary);
+  const resolved = await resolveDebate(niche, builder, cynic, operator, userContext, layerSummary);
 
   // Reality-Check Force Override
   if (operator.score >= 85 || cynic.score >= 90) {
