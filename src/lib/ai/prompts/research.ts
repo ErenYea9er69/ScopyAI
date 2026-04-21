@@ -26,7 +26,14 @@ export const queryPlanSchema = z.object({
   trendQueries: z.array(z.string()).default([]),
   regulationQueries: z.array(z.string()).default([]),
   unitEconomicsQueries: z.array(z.string()).default([]),
-}).default({});
+}).default({
+  marketSizeQueries: [],
+  competitorQueries: [],
+  painPointQueries: [],
+  trendQueries: [],
+  regulationQueries: [],
+  unitEconomicsQueries: [],
+});
 
 export function queryExpansionPrompt(niche: string, geography: string, uniqueInsight: string, whyNow: string) {
   return {

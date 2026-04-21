@@ -130,15 +130,37 @@ export const layer1Schema = z.object({
     reasoning: z.string().default(''),
   }).default({ low: '', mid: '', high: '', reasoning: '' }),
   notFound: z.array(z.string()).default([]),
-}).default({});
+}).default({
+  painPoints: [],
+  buyerLanguage: [],
+  purchaseTriggers: [],
+  jobsToBeDone: { functional: '', social: '', emotional: '' },
+  marketAwareness: 'problem_aware',
+  avatar: {
+    expertiseLevel: '',
+    mentalModel: '',
+    platforms: [],
+    identity: '',
+    selfNarrative: '',
+    trustedInfluencers: [],
+    contentConsumed: []
+  },
+  nicheHangouts: [],
+  dmu: [],
+  hiddenObjections: [],
+  desiresAndDreams: [],
+  shadowAvatar: { description: '', whyTheyWontBuy: '', howToExclude: '' },
+  paymentThreshold: { low: '', mid: '', high: '', reasoning: '' },
+  notFound: []
+});
 export type Layer1 = z.infer<typeof layer1Schema>;
 
 // ========== LAYER 2: MARKET INTELLIGENCE ==========
 
 export const layer2Schema = z.object({
-  tam: z.object({ range: z.string().default(''), confidence: confidenceLevel, sources: z.array(z.coerce.string()).default([]) }).default({ range: '', sources: [] }),
-  sam: z.object({ range: z.string().default(''), confidence: confidenceLevel, sources: z.array(z.coerce.string()).default([]) }).default({ range: '', sources: [] }),
-  som: z.object({ range: z.string().default(''), confidence: confidenceLevel, sources: z.array(z.coerce.string()).default([]) }).default({ range: '', sources: [] }),
+  tam: z.object({ range: z.string().default(''), confidence: confidenceLevel, sources: z.array(z.coerce.string()).default([]) }).default({ range: '', confidence: 'medium', sources: [] }),
+  sam: z.object({ range: z.string().default(''), confidence: confidenceLevel, sources: z.array(z.coerce.string()).default([]) }).default({ range: '', confidence: 'medium', sources: [] }),
+  som: z.object({ range: z.string().default(''), confidence: confidenceLevel, sources: z.array(z.coerce.string()).default([]) }).default({ range: '', confidence: 'medium', sources: [] }),
   proxyMarketComparison: z.object({
     parentMarket: z.string().default(''),
     penetrationPotential: z.string().default(''),
@@ -163,7 +185,7 @@ export const layer2Schema = z.object({
     searchVolumeTrend: z.string().default(''),
     socialSentiment: z.string().default(''),
     fundingActivity: z.string().default(''),
-  }).default({ velocityScore: 50, searchVolumeTrend: '', socialSentiment: '', fundingActivity: '' }),
+  }).default({ direction: 'stable', velocityScore: 50, searchVolumeTrend: '', socialSentiment: '', fundingActivity: '' }),
   macroInflectionPoints: z.array(z.object({
     trigger: z.string().default(''),
     marketImpact: z.string().default(''),
@@ -171,7 +193,18 @@ export const layer2Schema = z.object({
   })).default([]),
   marketTimingVerdict: z.string().default(''),
   notFound: z.array(z.string()).default([]),
-}).default({});
+}).default({
+  tam: { range: '', confidence: 'medium', sources: [] },
+  sam: { range: '', confidence: 'medium', sources: [] },
+  som: { range: '', confidence: 'medium', sources: [] },
+  proxyMarketComparison: { parentMarket: '', penetrationPotential: '', ceilingProxy: '' },
+  capturedEase: { score: 5, reasoning: '' },
+  geographicExpansionMap: { tier1: [], tier2: [], tier3: [], reasoning: '' },
+  marketMomentum: { direction: 'stable', velocityScore: 50, searchVolumeTrend: '', socialSentiment: '', fundingActivity: '' },
+  macroInflectionPoints: [],
+  marketTimingVerdict: '',
+  notFound: []
+});
 export type Layer2 = z.infer<typeof layer2Schema>;
 
 // ========== LAYER 3: SURVIVAL INTELLIGENCE ==========
@@ -189,7 +222,7 @@ export const layer3Schema = z.object({
     threateningModel: z.string().default(''),
     valueAtRisk: z.string().default(''),
     confidence: confidenceLevel,
-  }).default({ score: 0, threateningModel: '', valueAtRisk: '' }),
+  }).default({ score: 0, threateningModel: '', valueAtRisk: '', confidence: 'medium' }),
   platformDependency: z.object({
     score: resilientScore10,
     primaryPlatform: z.string().default(''),
@@ -238,7 +271,21 @@ export const layer3Schema = z.object({
     cascadingEffect: z.string().default(''),
   })).default([]),
   notFound: z.array(z.string()).default([]),
-}).default({});
+}).default({
+  dyingTrendSignals: [],
+  nativeObsolescence: { probability: 0, threateningFeature: '', timeframe: '', reasoning: '' },
+  aiDisruptionRisk: { score: 0, threateningModel: '', valueAtRisk: '', confidence: 'medium' },
+  platformDependency: { score: 0, primaryPlatform: '', risk: '' },
+  platformComplianceRisk: { appleGoogleRisk: '', apiProviderRisk: '', mitigation: '' },
+  saturationScore: { percentage: 0, reasoning: '' },
+  redLineBlockers: [],
+  legalMatrix: [],
+  gorillaCompetitors: [],
+  executionDifficulty: { score: 50, blockers: [] },
+  pivotBuffer: { score: 5, runwayUnits: '', reasoning: '' },
+  scenarioSimulator: [],
+  notFound: []
+});
 export type Layer3 = z.infer<typeof layer3Schema>;
 
 // ========== LAYER 4: COMPETITOR INTELLIGENCE ==========
@@ -249,7 +296,13 @@ export const failedCompetitorSchema = z.object({
   funding: z.string().default(''),
   reason: z.string().default(''),
   lesson: z.string().default(''),
-}).default({});
+}).default({
+  name: '',
+  shutdownDate: '',
+  funding: '',
+  reason: '',
+  lesson: '',
+});
 export type FailedCompetitor = z.infer<typeof failedCompetitorSchema>;
 
 export const layer4Schema = z.object({
@@ -285,7 +338,18 @@ export const layer4Schema = z.object({
   substituteThreats: z.array(z.object({ substitute: z.string().default(''), linkedJob: z.string().default(''), risk: z.string().default('') })).default([]),
   competitorVelocity: z.array(z.object({ competitor: z.string().default(''), momentum: z.preprocess((val)=>String(val || 'stable').toLowerCase(), z.enum(['surging', 'stable', 'losing_ground'])).catch('stable'), direction: z.string().default('') })).default([]),
   notFound: z.array(z.string()).default([]),
-}).default({});
+}).default({
+  userCompetitorVerdict: [],
+  competitors: [],
+  differentiationVectors: [],
+  failedCompetitors: [],
+  marketGaps: [],
+  seoWhiteSpace: [],
+  pricingSpectrum: { low: '', mid: '', high: '', yourSweetSpot: '' },
+  substituteThreats: [],
+  competitorVelocity: [],
+  notFound: []
+});
 export type Layer4 = z.infer<typeof layer4Schema>;
 
 // ========== LAYER 5: UNIT ECONOMICS ==========
@@ -296,13 +360,13 @@ export const layer5Schema = z.object({
     channelBreakdown: z.array(z.object({ channel: z.string().default(''), estCAC: z.string().default('') })).default([]),
     sources: z.array(z.coerce.string()).default([]),
     confidence: confidenceLevel,
-  }).default({ range: '', sources: [] }),
+  }).default({ range: '', channelBreakdown: [], sources: [], confidence: 'medium' }),
   ltvBenchmark: z.object({
     range: z.string().default(''),
     churnRate: z.string().default(''),
     nrrExpansionPotential: z.string().default(''),
     confidence: confidenceLevel,
-  }).default({ range: '', churnRate: '', nrrExpansionPotential: '' }),
+  }).default({ range: '', churnRate: '', nrrExpansionPotential: '', confidence: 'medium' }),
   paybackPeriod: z.object({
     months: z.coerce.number().default(0),
     verdict: z.string().default(''),
@@ -329,7 +393,17 @@ export const layer5Schema = z.object({
     reasoning: z.string().default(''),
   }).default({ price: '', reasoning: '' }),
   notFound: z.array(z.string()).default([]),
-}).default({});
+}).default({
+  cacBenchmark: { range: '', channelBreakdown: [], sources: [], confidence: 'medium' },
+  ltvBenchmark: { range: '', churnRate: '', nrrExpansionPotential: '', confidence: 'medium' },
+  paybackPeriod: { months: 0, verdict: '' },
+  grossMarginHealth: { marginPercentage: 0, aiCogsEstimate: '', reasoning: '' },
+  ltvCacVerdict: { ratio: '', verdict: '' },
+  breakEven: { timeline: '', assumptions: [] },
+  runwaySensitivityMatrix: [],
+  optimalPricePoint: { price: '', reasoning: '' },
+  notFound: []
+});
 export type Layer5 = z.infer<typeof layer5Schema>;
 
 // ========== LAYER 6: OFFER & GTM ==========
@@ -373,7 +447,16 @@ export const layer6Schema = z.object({
     reasoning: z.string().optional().default(''),
   })).default([]),
   notFound: z.array(z.string()).default([]),
-}).default({});
+}).default({
+  offerIdeas: [],
+  unscalablePlaybook: [],
+  gtmRoadmap: [],
+  creativeHooks: [],
+  growthLoops: [],
+  channelMap: [],
+  revenueModelFit: [],
+  notFound: []
+});
 export type Layer6 = z.infer<typeof layer6Schema>;
 
 // ========== LAYER 7: ANTI-COMMODITISATION ==========
@@ -403,7 +486,13 @@ export const layer7Schema = z.object({
     verdict: z.string().default(''),
   }).default({ score: 0, frictionFactors: [], verdict: '' }),
   notFound: z.array(z.string()).default([]),
-}).default({});
+}).default({
+  counterPositioning: [],
+  moats: [],
+  moatFlywheel: [],
+  migrationFrictionScore: { score: 0, frictionFactors: [], verdict: '' },
+  notFound: []
+});
 export type Layer7 = z.infer<typeof layer7Schema>;
 
 // ========== LAYER 8: PERSONA-SPECIFIC ==========
@@ -416,7 +505,10 @@ export const layer8Schema = z.object({
     sources: z.array(z.coerce.string()).default([]),
   })).default([]),
   notFound: z.array(z.string()).default([]),
-}).default({});
+}).default({
+  modules: [],
+  notFound: []
+});
 export type Layer8 = z.infer<typeof layer8Schema>;
 
 // ========== TRI-AGENT DEBATE ==========
@@ -426,7 +518,7 @@ export const agentVerdictSchema = z.object({
   signal: z.string().default('GO'),
   reasoning: z.string().default(''),
   keyPoints: z.array(z.string()).default([]),
-}).default({ score: 50, signal: 'GO', keyPoints: [] });
+}).default({ score: 50, signal: 'GO', reasoning: '', keyPoints: [] });
 export type AgentVerdict = z.infer<typeof agentVerdictSchema>;
 
 export const debateResultSchema = z.object({
@@ -441,7 +533,16 @@ export const debateResultSchema = z.object({
     action: z.string().default(''),
   })).default([]),
   contradictoryCertainty: z.boolean().optional().default(false),
-}).default({});
+}).default({
+  builder: { score: 50, signal: 'GO', reasoning: '', keyPoints: [] },
+  cynic: { score: 50, signal: 'GO', reasoning: '', keyPoints: [] },
+  operator: { score: 50, signal: 'GO', reasoning: '', keyPoints: [] },
+  finalVerdict: 'Conditional Proceed',
+  compositeScore: 50,
+  clashPoints: [],
+  milestones: [],
+  contradictoryCertainty: false,
+});
 export type DebateResult = z.infer<typeof debateResultSchema>;
 
 // ========== AUTO-PIVOT ==========
@@ -453,7 +554,14 @@ export const pivotOptionSchema = z.object({
   newSaturation: percentSchema,
   executionFit: z.string().default(''),
   reasoning: z.string().default(''),
-}).default({});
+}).default({
+  rank: '1',
+  title: 'Pivot Option',
+  description: '',
+  newSaturation: 0,
+  executionFit: '',
+  reasoning: '',
+});
 export type PivotOption = z.infer<typeof pivotOptionSchema>;
 
 export const autoPivotSchema = z.object({
